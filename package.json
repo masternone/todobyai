@@ -9,6 +9,7 @@
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
     "prepare": "husky",
+    "start": "node dist/server/server.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

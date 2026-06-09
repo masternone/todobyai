@@ -23,6 +23,7 @@ export type TaskRepository = {
   updateForUser(user: User, taskId: string, fields: EditableTaskFields): Promise<Task>;
   changeStateForUser(user: User, taskId: string, taskState: TaskState): Promise<Task>;
   deleteForUser(user: User, taskId: string): Promise<void>;
+  listForUser(user: User): Promise<Task[]>;
   listMainViewForUser(
     user: User,
     input: { filter: TaskFilter; sort: TaskSort; today: string },
@@ -96,6 +97,10 @@ class LibSqlTaskRepository implements TaskRepository {
       sql: "DELETE FROM tasks WHERE id = ? AND owner_user_id = ?",
       args: [taskId, user.id],
     });
+  }
+
+  async listForUser(user: User): Promise<Task[]> {
+    return this.listOwnedTasks(user, "1 = 1");
   }
 
   async listMainViewForUser(

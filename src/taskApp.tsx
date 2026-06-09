@@ -1,22 +1,9 @@
-import React, { useMemo, useState } from "react";
-import { createRoot } from "react-dom/client";
+import React, { useEffect, useMemo, useState } from "react";
 import { Archive, Check, Edit3, Inbox, RotateCcw, Save, Trash2, X } from "lucide-react";
+import { Link, useLocation } from "@tanstack/react-router";
 import {
-  Link,
-  Outlet,
-  RouterProvider,
-  createRoute,
-  createRootRoute,
-  createRouter,
-  useLocation,
-  useRouter,
-} from "@tanstack/react-router";
-import {
-  changeTaskState,
-  createTask,
   deriveArchivedViewTasks,
   deriveMainViewTasks,
-  editTask,
   isDueToday,
   isPastDue,
   type Task,
@@ -24,7 +11,7 @@ import {
   type TaskSort,
   type TaskState,
 } from "./domain/task";
-import { initialTasks } from "./client/taskClient";
+import * as taskClient from "./client/taskClient";
 import "./styles.css";
 
 const filters: TaskFilter[] = ["All", "Past Due", "Due Today"];
@@ -41,10 +28,13 @@ const fieldClass =
 
 type AppContext = {
   tasks: Task[];
-  addTask: (input: { title: string; note: string; dueDate: string }) => void;
-  updateTask: (taskId: string, fields: { title: string; note: string; dueDate: string }) => void;
-  moveTask: (taskId: string, taskState: TaskState) => void;
-  deleteTask: (taskId: string) => void;
+  addTask: (input: { title: string; note: string; dueDate: string }) => Promise<void>;
+  updateTask: (
+    taskId: string,
+    fields: { title: string; note: string; dueDate: string },
+  ) => Promise<void>;
+  moveTask: (taskId: string, taskState: TaskState) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
   today: string;
 };
 
@@ -58,79 +48,60 @@ function buttonClass(active = false): string {
   return cx(buttonShape, active ? activeButton : inactiveButton);
 }
 
-const rootRoute = createRootRoute({
-  component: AppShell,
-  notFoundComponent: NotFoundRedirect,
-});
-
-const mainRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/",
-  component: MainViewRoute,
-});
-
-const archiveRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/archive",
-  component: ArchiveViewRoute,
-});
-
-const routeTree = rootRoute.addChildren([mainRoute, archiveRoute]);
-
-const router = createRouter({
-  routeTree,
-  defaultNotFoundComponent: NotFoundRedirect,
-});
-
-declare module "@tanstack/react-router" {
-  interface Register {
-    router: typeof router;
-  }
-}
-
-function AppShell() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode }>) {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loadState, setLoadState] = useState<"loading" | "loaded" | "failed">("loading");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
 
-  function addTask(input: { title: string; note: string; dueDate: string }) {
-    setTasks((current) => [
-      createTask({
-        id: crypto.randomUUID(),
-        ownerUserId: "local-user",
-        title: input.title,
-        note: input.note,
-        dueDate: input.dueDate,
-        now: new Date().toISOString(),
-      }),
-      ...current,
-    ]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTasks() {
+      try {
+        const loadedTasks = await taskClient.listTasks();
+        if (!cancelled) {
+          setTasks(loadedTasks);
+          setLoadState("loaded");
+          setErrorMessage(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLoadState("failed");
+          setErrorMessage(error instanceof Error ? error.message : "Could not load Tasks.");
+        }
+      }
+    }
+
+    void loadTasks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function addTask(input: { title: string; note: string; dueDate: string }) {
+    const task = await taskClient.createTask(input);
+    setTasks((current) => [task, ...current]);
   }
 
-  function updateTask(taskId: string, fields: { title: string; note: string; dueDate: string }) {
-    setTasks((current) =>
-      current.map((task) =>
-        task.id === taskId
-          ? editTask(
-              task,
-              { title: fields.title, note: fields.note, dueDate: fields.dueDate },
-              new Date().toISOString(),
-            )
-          : task,
-      ),
-    );
+  async function updateTask(
+    taskId: string,
+    fields: { title: string; note: string; dueDate: string },
+  ) {
+    const updatedTask = await taskClient.updateTask(taskId, fields);
+    setTasks((current) => current.map((task) => (task.id === taskId ? updatedTask : task)));
   }
 
-  function moveTask(taskId: string, taskState: TaskState) {
-    setTasks((current) =>
-      current.map((task) =>
-        task.id === taskId ? changeTaskState(task, taskState, new Date().toISOString()) : task,
-      ),
-    );
+  async function moveTask(taskId: string, taskState: TaskState) {
+    const updatedTask = await taskClient.changeTaskState(taskId, taskState);
+    setTasks((current) => current.map((task) => (task.id === taskId ? updatedTask : task)));
   }
 
-  function deleteTask(taskId: string) {
+  async function deleteTask(taskId: string) {
     const confirmed = window.confirm("Delete this Task permanently? This cannot be undone.");
     if (confirmed) {
+      await taskClient.deleteTask(taskId);
       setTasks((current) => current.filter((task) => task.id !== taskId));
     }
   }
@@ -147,7 +118,11 @@ function AppShell() {
   return (
     <AppStateContext.Provider value={context}>
       <main className="mx-auto max-w-6xl p-4 md:p-8">
-        <Outlet />
+        {loadState === "loading" ? <p className="py-8 text-slate-500">Loading Tasks...</p> : null}
+        {loadState === "failed" ? (
+          <p className="py-8 text-rose-700">{errorMessage ?? "Could not load Tasks."}</p>
+        ) : null}
+        {loadState === "loaded" ? children : null}
       </main>
     </AppStateContext.Provider>
   );
@@ -184,7 +159,7 @@ function AppHeader({ title }: { title: string }) {
   );
 }
 
-function MainViewRoute() {
+export function MainViewRoute() {
   const { tasks, addTask, updateTask, moveTask, deleteTask, today } = useAppState();
   const [filter, setFilter] = useState<TaskFilter>("All");
   const [sort, setSort] = useState<TaskSort>("Newest");
@@ -256,7 +231,7 @@ function MainViewRoute() {
   );
 }
 
-function ArchiveViewRoute() {
+export function ArchiveViewRoute() {
   const { tasks, updateTask, moveTask, deleteTask, today } = useAppState();
   const archivedTasks = useMemo(() => deriveArchivedViewTasks(tasks), [tasks]);
 
@@ -276,32 +251,28 @@ function ArchiveViewRoute() {
   );
 }
 
-function NotFoundRedirect() {
-  const router = useRouter();
-
-  React.useEffect(() => {
-    void router.navigate({ to: "/", replace: true });
-  }, [router]);
-
-  return null;
-}
-
 function TaskComposer({
   onAdd,
 }: {
-  onAdd: (input: { title: string; note: string; dueDate: string }) => void;
+  onAdd: (input: { title: string; note: string; dueDate: string }) => Promise<void>;
 }) {
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!title.trim()) return;
-    onAdd({ title, note, dueDate });
-    setTitle("");
-    setNote("");
-    setDueDate("");
+    if (!title.trim() || saving) return;
+    setSaving(true);
+    try {
+      await onAdd({ title, note, dueDate });
+      setTitle("");
+      setNote("");
+      setDueDate("");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -330,7 +301,7 @@ function TaskComposer({
         value={dueDate}
         onChange={(event) => setDueDate(event.target.value)}
       />
-      <button className={buttonClass(true)} disabled={!title.trim()} type="submit">
+      <button className={buttonClass(true)} disabled={!title.trim() || saving} type="submit">
         <Save size={16} />
         Create
       </button>
@@ -373,9 +344,12 @@ function TaskList(props: {
   tasks: Task[];
   today: string;
   emptyText: string;
-  onDelete: (taskId: string) => void;
-  onMove: (taskId: string, state: TaskState) => void;
-  onUpdate: (taskId: string, input: { title: string; note: string; dueDate: string }) => void;
+  onDelete: (taskId: string) => Promise<void>;
+  onMove: (taskId: string, state: TaskState) => Promise<void>;
+  onUpdate: (
+    taskId: string,
+    input: { title: string; note: string; dueDate: string },
+  ) => Promise<void>;
 }) {
   return (
     <section className="mt-6">
@@ -412,9 +386,12 @@ function TaskRow({
 }: {
   task: Task;
   today: string;
-  onDelete: (taskId: string) => void;
-  onMove: (taskId: string, state: TaskState) => void;
-  onUpdate: (taskId: string, input: { title: string; note: string; dueDate: string }) => void;
+  onDelete: (taskId: string) => Promise<void>;
+  onMove: (taskId: string, state: TaskState) => Promise<void>;
+  onUpdate: (
+    taskId: string,
+    input: { title: string; note: string; dueDate: string },
+  ) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
@@ -423,8 +400,8 @@ function TaskRow({
   const pastDue = isPastDue(task, today);
   const dueToday = isDueToday(task, today);
 
-  function save() {
-    onUpdate(task.id, { title, note, dueDate });
+  async function save() {
+    await onUpdate(task.id, { title, note, dueDate });
     setEditing(false);
   }
 
@@ -442,7 +419,7 @@ function TaskRow({
             ? "border-slate-300 bg-white text-slate-400 hover:border-teal-500 hover:bg-teal-50"
             : "border-teal-600 bg-teal-600 text-white hover:bg-teal-700",
         )}
-        onClick={() => onMove(task.id, task.taskState === "Active" ? "Completed" : "Active")}
+        onClick={() => void onMove(task.id, task.taskState === "Active" ? "Completed" : "Active")}
         title={task.taskState === "Active" ? "Complete Task" : "Restore Task"}
       >
         {task.taskState === "Active" ? null : <Check size={22} strokeWidth={2.5} />}
@@ -502,7 +479,7 @@ function TaskRow({
       <div className="ml-11 flex gap-1.5 md:ml-0">
         {editing ? (
           <>
-            <button className={iconButton} onClick={save} title="Save Task">
+            <button className={iconButton} onClick={() => void save()} title="Save Task">
               <Save size={16} />
             </button>
             <button className={iconButton} onClick={() => setEditing(false)} title="Cancel Edit">
@@ -517,7 +494,7 @@ function TaskRow({
             {task.taskState === "Archived" ? (
               <button
                 className={iconButton}
-                onClick={() => onMove(task.id, "Active")}
+                onClick={() => void onMove(task.id, "Active")}
                 title="Restore Task"
               >
                 <RotateCcw size={16} />
@@ -525,13 +502,17 @@ function TaskRow({
             ) : (
               <button
                 className={iconButton}
-                onClick={() => onMove(task.id, "Archived")}
+                onClick={() => void onMove(task.id, "Archived")}
                 title="Archive Task"
               >
                 <Archive size={16} />
               </button>
             )}
-            <button className={iconButton} onClick={() => onDelete(task.id)} title="Delete Task">
+            <button
+              className={iconButton}
+              onClick={() => void onDelete(task.id)}
+              title="Delete Task"
+            >
               <Trash2 size={16} />
             </button>
           </>
@@ -540,9 +521,3 @@ function TaskRow({
     </article>
   );
 }
-
-createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <RouterProvider router={router} />
-  </React.StrictMode>,
-);

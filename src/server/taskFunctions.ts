@@ -28,6 +28,11 @@ export async function deleteTaskForCurrentUser(taskId: string) {
   await taskRepository.deleteForUser(currentUser, taskId);
 }
 
+export async function listTasksForCurrentUser() {
+  await taskRepository.initialize();
+  return taskRepository.listForUser(currentUser);
+}
+
 export async function listMainViewTasksForCurrentUser(input: {
   filter: TaskFilter;
   sort: TaskSort;

@@ -1,27 +1,61 @@
-import { createTask, type Task } from "../domain/task";
+import { createServerFn } from "@tanstack/react-start";
+import type { EditableTaskFields, Task, TaskState } from "../domain/task";
+import {
+  changeTaskStateForCurrentUser,
+  createTaskForCurrentUser,
+  deleteTaskForCurrentUser,
+  listTasksForCurrentUser,
+  updateTaskForCurrentUser,
+} from "../server/taskFunctions";
 
-const now = new Date();
-const today = now.toISOString().slice(0, 10);
+const listTasksServerFn = createServerFn({ method: "GET" }).handler(async () => {
+  return listTasksForCurrentUser();
+});
 
-export const initialTasks: Task[] = [
-  createTask({
-    id: "task-seed-1",
-    ownerUserId: "local-user",
-    title: "Shape the first Task list",
-    note: "Keep Active work prominent and let Completed work stay available when needed.",
-    dueDate: today,
-    now: new Date(now.getTime() - 1000 * 60 * 30).toISOString(),
-  }),
-  {
-    ...createTask({
-      id: "task-seed-2",
-      ownerUserId: "local-user",
-      title: "Confirm delete copy",
-      note: "Delete should feel final and distinct from Archive.",
-      dueDate: new Date(now.getTime() - 86400000).toISOString().slice(0, 10),
-      now: new Date(now.getTime() - 1000 * 60 * 90).toISOString(),
-    }),
-    taskState: "Completed",
-    modifiedDate: new Date(now.getTime() - 1000 * 60 * 10).toISOString(),
-  },
-];
+const createTaskServerFn = createServerFn({ method: "POST" })
+  .validator((input: { title: string; note?: string | null; dueDate?: string | null }) => input)
+  .handler(async ({ data }) => {
+    return createTaskForCurrentUser(data);
+  });
+
+const updateTaskServerFn = createServerFn({ method: "POST" })
+  .validator((input: { taskId: string; fields: EditableTaskFields }) => input)
+  .handler(async ({ data }) => {
+    return updateTaskForCurrentUser(data.taskId, data.fields);
+  });
+
+const changeTaskStateServerFn = createServerFn({ method: "POST" })
+  .validator((input: { taskId: string; taskState: TaskState }) => input)
+  .handler(async ({ data }) => {
+    return changeTaskStateForCurrentUser(data.taskId, data.taskState);
+  });
+
+const deleteTaskServerFn = createServerFn({ method: "POST" })
+  .validator((input: { taskId: string }) => input)
+  .handler(async ({ data }) => {
+    await deleteTaskForCurrentUser(data.taskId);
+  });
+
+export function listTasks(): Promise<Task[]> {
+  return listTasksServerFn();
+}
+
+export function createTask(input: {
+  title: string;
+  note?: string | null;
+  dueDate?: string | null;
+}): Promise<Task> {
+  return createTaskServerFn({ data: input });
+}
+
+export function updateTask(taskId: string, fields: EditableTaskFields): Promise<Task> {
+  return updateTaskServerFn({ data: { taskId, fields } });
+}
+
+export function changeTaskState(taskId: string, taskState: TaskState): Promise<Task> {
+  return changeTaskStateServerFn({ data: { taskId, taskState } });
+}
+
+export function deleteTask(taskId: string): Promise<void> {
+  return deleteTaskServerFn({ data: { taskId } });
+}
