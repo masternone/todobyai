@@ -118,8 +118,13 @@ export function sortCompletedTasks(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => compareDesc(a.modifiedDate, b.modifiedDate));
 }
 
-export function deriveMainViewTasks(tasks: Task[], input: { filter: TaskFilter; sort: TaskSort; today: string }): MainViewTasks {
-  const visible = tasks.filter((task) => task.taskState !== "Archived").filter((task) => matchesTaskFilter(task, input.filter, input.today));
+export function deriveMainViewTasks(
+  tasks: Task[],
+  input: { filter: TaskFilter; sort: TaskSort; today: string },
+): MainViewTasks {
+  const visible = tasks
+    .filter((task) => task.taskState !== "Archived")
+    .filter((task) => matchesTaskFilter(task, input.filter, input.today));
   return {
     activeTasks: sortActiveTasks(
       visible.filter((task) => task.taskState === "Active"),

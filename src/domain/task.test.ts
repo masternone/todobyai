@@ -72,20 +72,30 @@ describe("Task domain behavior", () => {
       },
     ];
 
-    expect(deriveMainViewTasks(tasks, { filter: "All", sort: "Newest", today: "2026-06-09" }).activeTasks.map((task) => task.id)).toEqual([
-      "b",
-      "a",
-      "c",
-    ]);
-    expect(deriveMainViewTasks(tasks, { filter: "All", sort: "Oldest", today: "2026-06-09" }).activeTasks.map((task) => task.id)).toEqual([
-      "c",
-      "a",
-      "b",
-    ]);
     expect(
-      deriveMainViewTasks(tasks, { filter: "All", sort: "By Due Date", today: "2026-06-09" }).activeTasks.map((task) => task.id),
+      deriveMainViewTasks(tasks, {
+        filter: "All",
+        sort: "Newest",
+        today: "2026-06-09",
+      }).activeTasks.map((task) => task.id),
+    ).toEqual(["b", "a", "c"]);
+    expect(
+      deriveMainViewTasks(tasks, {
+        filter: "All",
+        sort: "Oldest",
+        today: "2026-06-09",
+      }).activeTasks.map((task) => task.id),
+    ).toEqual(["c", "a", "b"]);
+    expect(
+      deriveMainViewTasks(tasks, {
+        filter: "All",
+        sort: "By Due Date",
+        today: "2026-06-09",
+      }).activeTasks.map((task) => task.id),
     ).toEqual(["c", "b", "a"]);
-    expect(deriveMainViewTasks(tasks, { filter: "Due Today", sort: "Newest", today: "2026-06-10" })).toEqual({
+    expect(
+      deriveMainViewTasks(tasks, { filter: "Due Today", sort: "Newest", today: "2026-06-10" }),
+    ).toEqual({
       activeTasks: [tasks[2]],
       completedTasks: [tasks[3], tasks[4]],
     });
@@ -94,10 +104,23 @@ describe("Task domain behavior", () => {
   it("derives Archived View Tasks ordered by Recently Modified", () => {
     const tasks: Task[] = [
       { ...baseTask, id: "active", taskState: "Active", modifiedDate: "2026-06-09T12:00:00.000Z" },
-      { ...baseTask, id: "old-archive", taskState: "Archived", modifiedDate: "2026-06-09T10:00:00.000Z" },
-      { ...baseTask, id: "new-archive", taskState: "Archived", modifiedDate: "2026-06-09T11:00:00.000Z" },
+      {
+        ...baseTask,
+        id: "old-archive",
+        taskState: "Archived",
+        modifiedDate: "2026-06-09T10:00:00.000Z",
+      },
+      {
+        ...baseTask,
+        id: "new-archive",
+        taskState: "Archived",
+        modifiedDate: "2026-06-09T11:00:00.000Z",
+      },
     ];
 
-    expect(deriveArchivedViewTasks(tasks).map((task) => task.id)).toEqual(["new-archive", "old-archive"]);
+    expect(deriveArchivedViewTasks(tasks).map((task) => task.id)).toEqual([
+      "new-archive",
+      "old-archive",
+    ]);
   });
 });

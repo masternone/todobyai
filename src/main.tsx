@@ -1,7 +1,16 @@
 import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Archive, Check, Edit3, Inbox, RotateCcw, Save, Trash2, X } from "lucide-react";
-import { Link, Outlet, RouterProvider, createRoute, createRootRoute, createRouter, useLocation, useRouter } from "@tanstack/react-router";
+import {
+  Link,
+  Outlet,
+  RouterProvider,
+  createRoute,
+  createRootRoute,
+  createRouter,
+  useLocation,
+  useRouter,
+} from "@tanstack/react-router";
 import {
   changeTaskState,
   createTask,
@@ -101,7 +110,11 @@ function AppShell() {
     setTasks((current) =>
       current.map((task) =>
         task.id === taskId
-          ? editTask(task, { title: fields.title, note: fields.note, dueDate: fields.dueDate }, new Date().toISOString())
+          ? editTask(
+              task,
+              { title: fields.title, note: fields.note, dueDate: fields.dueDate },
+              new Date().toISOString(),
+            )
           : task,
       ),
     );
@@ -109,7 +122,9 @@ function AppShell() {
 
   function moveTask(taskId: string, taskState: TaskState) {
     setTasks((current) =>
-      current.map((task) => (task.id === taskId ? changeTaskState(task, taskState, new Date().toISOString()) : task)),
+      current.map((task) =>
+        task.id === taskId ? changeTaskState(task, taskState, new Date().toISOString()) : task,
+      ),
     );
   }
 
@@ -175,17 +190,32 @@ function MainViewRoute() {
   const [sort, setSort] = useState<TaskSort>("Newest");
   const [showCompleted, setShowCompleted] = useState(true);
 
-  const mainView = useMemo(() => deriveMainViewTasks(tasks, { filter, sort, today }), [filter, sort, tasks, today]);
+  const mainView = useMemo(
+    () => deriveMainViewTasks(tasks, { filter, sort, today }),
+    [filter, sort, tasks, today],
+  );
 
   return (
     <>
       <AppHeader title="Main View" />
       <TaskComposer onAdd={addTask} />
-      <section className="my-4 mb-7 flex flex-col gap-2 md:flex-row md:items-end md:justify-between" aria-label="Main View controls">
-        <SegmentedControl label="Task Filter" values={filters} value={filter} onChange={setFilter} />
+      <section
+        className="my-4 mb-7 flex flex-col gap-2 md:flex-row md:items-end md:justify-between"
+        aria-label="Main View controls"
+      >
+        <SegmentedControl
+          label="Task Filter"
+          values={filters}
+          value={filter}
+          onChange={setFilter}
+        />
         <label className="grid gap-1.5">
           <span className="text-xs font-bold text-slate-500">Task Sort</span>
-          <select className={fieldClass} value={sort} onChange={(event) => setSort(event.target.value as TaskSort)}>
+          <select
+            className={fieldClass}
+            value={sort}
+            onChange={(event) => setSort(event.target.value as TaskSort)}
+          >
             {sorts.map((item) => (
               <option key={item}>{item}</option>
             ))}
@@ -256,7 +286,11 @@ function NotFoundRedirect() {
   return null;
 }
 
-function TaskComposer({ onAdd }: { onAdd: (input: { title: string; note: string; dueDate: string }) => void }) {
+function TaskComposer({
+  onAdd,
+}: {
+  onAdd: (input: { title: string; note: string; dueDate: string }) => void;
+}) {
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -271,7 +305,10 @@ function TaskComposer({ onAdd }: { onAdd: (input: { title: string; note: string;
   }
 
   return (
-    <form className="grid items-center gap-2 rounded-lg border border-slate-300 bg-white p-3 lg:grid-cols-4" onSubmit={submit}>
+    <form
+      className="grid items-center gap-2 rounded-lg border border-slate-300 bg-white p-3 lg:grid-cols-4"
+      onSubmit={submit}
+    >
       <input
         aria-label="Title"
         className={fieldClass}
@@ -317,7 +354,12 @@ function SegmentedControl<T extends string>({
       <span className="text-xs font-bold text-slate-500">{label}</span>
       <div className="flex flex-wrap items-center gap-2">
         {values.map((item) => (
-          <button className={buttonClass(item === value)} key={item} onClick={() => onChange(item)} type="button">
+          <button
+            className={buttonClass(item === value)}
+            key={item}
+            onClick={() => onChange(item)}
+            type="button"
+          >
             {item}
           </button>
         ))}
@@ -408,8 +450,18 @@ function TaskRow({
       <div className="min-w-0 flex-1">
         {editing ? (
           <div className="grid gap-2 lg:grid-cols-3">
-            <input className={fieldClass} aria-label="Title" value={title} onChange={(event) => setTitle(event.target.value)} />
-            <input className={fieldClass} aria-label="Note" value={note} onChange={(event) => setNote(event.target.value)} />
+            <input
+              className={fieldClass}
+              aria-label="Title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+            />
+            <input
+              className={fieldClass}
+              aria-label="Note"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
             <input
               className={fieldClass}
               aria-label="Due Date"
@@ -423,13 +475,19 @@ function TaskRow({
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-semibold text-slate-950">{task.title}</h3>
               {pastDue ? (
-                <span className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-700">Past Due</span>
+                <span className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-700">
+                  Past Due
+                </span>
               ) : null}
               {dueToday ? (
-                <span className="rounded-full border border-teal-300 bg-teal-50 px-2 py-0.5 text-xs font-bold text-teal-700">Due Today</span>
+                <span className="rounded-full border border-teal-300 bg-teal-50 px-2 py-0.5 text-xs font-bold text-teal-700">
+                  Due Today
+                </span>
               ) : null}
             </div>
-            {task.note ? <p className="mt-1 max-w-prose leading-snug text-slate-500">{task.note}</p> : null}
+            {task.note ? (
+              <p className="mt-1 max-w-prose leading-snug text-slate-500">{task.note}</p>
+            ) : null}
             {task.dueDate ? (
               <dl className="mt-2 flex flex-wrap gap-4">
                 <div>
@@ -457,11 +515,19 @@ function TaskRow({
               <Edit3 size={16} />
             </button>
             {task.taskState === "Archived" ? (
-              <button className={iconButton} onClick={() => onMove(task.id, "Active")} title="Restore Task">
+              <button
+                className={iconButton}
+                onClick={() => onMove(task.id, "Active")}
+                title="Restore Task"
+              >
                 <RotateCcw size={16} />
               </button>
             ) : (
-              <button className={iconButton} onClick={() => onMove(task.id, "Archived")} title="Archive Task">
+              <button
+                className={iconButton}
+                onClick={() => onMove(task.id, "Archived")}
+                title="Archive Task"
+              >
                 <Archive size={16} />
               </button>
             )}

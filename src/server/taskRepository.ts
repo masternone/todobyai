@@ -16,15 +16,24 @@ import {
 
 export type TaskRepository = {
   initialize(): Promise<void>;
-  createForUser(user: User, input: { title: string; note?: string | null; dueDate?: string | null }): Promise<Task>;
+  createForUser(
+    user: User,
+    input: { title: string; note?: string | null; dueDate?: string | null },
+  ): Promise<Task>;
   updateForUser(user: User, taskId: string, fields: EditableTaskFields): Promise<Task>;
   changeStateForUser(user: User, taskId: string, taskState: TaskState): Promise<Task>;
   deleteForUser(user: User, taskId: string): Promise<void>;
-  listMainViewForUser(user: User, input: { filter: TaskFilter; sort: TaskSort; today: string }): Promise<MainViewTasks>;
+  listMainViewForUser(
+    user: User,
+    input: { filter: TaskFilter; sort: TaskSort; today: string },
+  ): Promise<MainViewTasks>;
   listArchivedForUser(user: User): Promise<Task[]>;
 };
 
-export function createLibSqlTaskRepository(options?: { url?: string; now?: () => Date }): TaskRepository {
+export function createLibSqlTaskRepository(options?: {
+  url?: string;
+  now?: () => Date;
+}): TaskRepository {
   const client = createClient({ url: options?.url ?? "file:todo-by-ai.db" });
   const now = () => (options?.now ?? (() => new Date()))().toISOString();
 
@@ -52,7 +61,10 @@ class LibSqlTaskRepository implements TaskRepository {
     `);
   }
 
-  async createForUser(user: User, input: { title: string; note?: string | null; dueDate?: string | null }): Promise<Task> {
+  async createForUser(
+    user: User,
+    input: { title: string; note?: string | null; dueDate?: string | null },
+  ): Promise<Task> {
     const task = createTask({
       id: crypto.randomUUID(),
       ownerUserId: user.id,
@@ -86,7 +98,10 @@ class LibSqlTaskRepository implements TaskRepository {
     });
   }
 
-  async listMainViewForUser(user: User, input: { filter: TaskFilter; sort: TaskSort; today: string }): Promise<MainViewTasks> {
+  async listMainViewForUser(
+    user: User,
+    input: { filter: TaskFilter; sort: TaskSort; today: string },
+  ): Promise<MainViewTasks> {
     const rows = await this.listOwnedTasks(user, "task_state != 'Archived'");
     return deriveMainViewTasks(rows, input);
   }
@@ -132,7 +147,15 @@ class LibSqlTaskRepository implements TaskRepository {
         SET title = ?, note = ?, due_date = ?, modified_date = ?, task_state = ?
         WHERE id = ? AND owner_user_id = ?
       `,
-      args: [task.title, task.note, task.dueDate, task.modifiedDate, task.taskState, task.id, task.ownerUserId],
+      args: [
+        task.title,
+        task.note,
+        task.dueDate,
+        task.modifiedDate,
+        task.taskState,
+        task.id,
+        task.ownerUserId,
+      ],
     });
   }
 }
