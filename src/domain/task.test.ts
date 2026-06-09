@@ -101,24 +101,36 @@ describe("Task domain behavior", () => {
     });
   });
 
-  it("derives Archived View Tasks ordered by Recently Modified", () => {
+  it("derives Archived View Tasks according to Task Sort rules", () => {
     const tasks: Task[] = [
       { ...baseTask, id: "active", taskState: "Active", modifiedDate: "2026-06-09T12:00:00.000Z" },
       {
         ...baseTask,
         id: "old-archive",
         taskState: "Archived",
+        createdDate: "2026-06-07T12:00:00.000Z",
+        dueDate: "2026-06-11",
         modifiedDate: "2026-06-09T10:00:00.000Z",
       },
       {
         ...baseTask,
         id: "new-archive",
         taskState: "Archived",
+        createdDate: "2026-06-08T12:00:00.000Z",
+        dueDate: "2026-06-10",
         modifiedDate: "2026-06-09T11:00:00.000Z",
       },
     ];
 
     expect(deriveArchivedViewTasks(tasks).map((task) => task.id)).toEqual([
+      "new-archive",
+      "old-archive",
+    ]);
+    expect(deriveArchivedViewTasks(tasks, "Oldest").map((task) => task.id)).toEqual([
+      "old-archive",
+      "new-archive",
+    ]);
+    expect(deriveArchivedViewTasks(tasks, "By Due Date").map((task) => task.id)).toEqual([
       "new-archive",
       "old-archive",
     ]);

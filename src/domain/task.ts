@@ -114,8 +114,12 @@ export function sortActiveTasks(tasks: Task[], sort: TaskSort): Task[] {
   });
 }
 
-export function sortCompletedTasks(tasks: Task[]): Task[] {
-  return [...tasks].sort((a, b) => compareDesc(a.modifiedDate, b.modifiedDate));
+export function sortCompletedTasks(tasks: Task[], sort: TaskSort = "Recently Modified"): Task[] {
+  if (sort === "Recently Modified") {
+    return [...tasks].sort((a, b) => compareDesc(a.modifiedDate, b.modifiedDate));
+  }
+
+  return sortActiveTasks(tasks, sort);
 }
 
 export function deriveMainViewTasks(
@@ -134,8 +138,14 @@ export function deriveMainViewTasks(
   };
 }
 
-export function deriveArchivedViewTasks(tasks: Task[]): Task[] {
-  return sortCompletedTasks(tasks.filter((task) => task.taskState === "Archived"));
+export function deriveArchivedViewTasks(
+  tasks: Task[],
+  sort: TaskSort = "Recently Modified",
+): Task[] {
+  return sortCompletedTasks(
+    tasks.filter((task) => task.taskState === "Archived"),
+    sort,
+  );
 }
 
 function compareAsc(a: string, b: string): number {

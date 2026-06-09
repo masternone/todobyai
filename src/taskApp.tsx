@@ -233,11 +233,29 @@ export function MainViewRoute() {
 
 export function ArchiveViewRoute() {
   const { tasks, updateTask, moveTask, deleteTask, today } = useAppState();
-  const archivedTasks = useMemo(() => deriveArchivedViewTasks(tasks), [tasks]);
+  const [sort, setSort] = useState<TaskSort>("Recently Modified");
+  const archivedTasks = useMemo(() => deriveArchivedViewTasks(tasks, sort), [sort, tasks]);
 
   return (
     <>
       <AppHeader title="Archived View" />
+      <section
+        className="my-4 mb-7 flex flex-col gap-2 md:flex-row md:items-end md:justify-end"
+        aria-label="Archived View controls"
+      >
+        <label className="grid gap-1.5">
+          <span className="text-xs font-bold text-slate-500">Task Sort</span>
+          <select
+            className={fieldClass}
+            value={sort}
+            onChange={(event) => setSort(event.target.value as TaskSort)}
+          >
+            {sorts.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+        </label>
+      </section>
       <TaskList
         title="Archived"
         tasks={archivedTasks}

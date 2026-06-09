@@ -41,7 +41,7 @@ A Main View choice that determines which Tasks are shown. The default Task Filte
 _Avoid_: View Mode
 
 **Task Sort**:
-A Main View choice that determines the order of shown Tasks. Task Sort options include Newest, Oldest, Recently Modified, and By Due Date.
+A Task surface choice that determines the order of shown Tasks. Task Sort options include Newest, Oldest, Recently Modified, and By Due Date.
 _Avoid_: Ordering
 
 **Newest**:
