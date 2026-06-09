@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Archive, Check, Edit3, Inbox, RotateCcw, Save, Trash2, X } from "lucide-react";
+import { Link, Outlet, RouterProvider, createRoute, createRootRoute, createRouter, useRouter } from "@tanstack/react-router";
 import {
   changeTaskState,
   createTask,
@@ -30,6 +31,17 @@ const taskCheckButton =
 const fieldClass =
   "min-h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-slate-900 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600";
 
+type AppContext = {
+  tasks: Task[];
+  addTask: (input: { title: string; note: string; dueDate: string }) => void;
+  updateTask: (taskId: string, fields: { title: string; note: string; dueDate: string }) => void;
+  moveTask: (taskId: string, taskState: TaskState) => void;
+  deleteTask: (taskId: string) => void;
+  today: string;
+};
+
+const AppStateContext = React.createContext<AppContext | null>(null);
+
 function cx(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(" ");
 }
@@ -38,26 +50,39 @@ function buttonClass(active = false): string {
   return cx(buttonShape, active ? activeButton : inactiveButton);
 }
 
-function App() {
+const rootRoute = createRootRoute({
+  component: AppShell,
+  notFoundComponent: NotFoundRedirect,
+});
+
+const mainRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/",
+  component: MainViewRoute,
+});
+
+const archiveRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/archive",
+  component: ArchiveViewRoute,
+});
+
+const routeTree = rootRoute.addChildren([mainRoute, archiveRoute]);
+
+const router = createRouter({
+  routeTree,
+  defaultNotFoundComponent: NotFoundRedirect,
+});
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
+
+function AppShell() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [route, setRoute] = useState<"main" | "archived">("main");
-  const [filter, setFilter] = useState<TaskFilter>("All");
-  const [sort, setSort] = useState<TaskSort>("Newest");
-  const [showCompleted, setShowCompleted] = useState(true);
   const today = new Date().toISOString().slice(0, 10);
-
-  const mainView = useMemo(() => {
-    const visible = tasks.filter((task) => task.taskState !== "Archived").filter((task) => matchesTaskFilter(task, filter, today));
-    return {
-      activeTasks: sortActiveTasks(
-        visible.filter((task) => task.taskState === "Active"),
-        sort,
-      ),
-      completedTasks: sortCompletedTasks(visible.filter((task) => task.taskState === "Completed")),
-    };
-  }, [filter, sort, tasks, today]);
-
-  const archivedTasks = useMemo(() => sortCompletedTasks(tasks.filter((task) => task.taskState === "Archived")), [tasks]);
 
   function addTask(input: { title: string; note: string; dueDate: string }) {
     setTasks((current) => [
@@ -96,85 +121,147 @@ function App() {
     }
   }
 
+  const context: AppContext = {
+    tasks,
+    addTask,
+    updateTask,
+    moveTask,
+    deleteTask,
+    today,
+  };
+
   return (
-    <main className="mx-auto max-w-6xl p-4 md:p-8">
-      <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="mb-1 text-xs font-bold text-slate-500">Todo by AI</p>
-          <h1 className="text-3xl font-bold leading-tight tracking-normal text-slate-950">
-            {route === "main" ? "Main View" : "Archived View"}
-          </h1>
-        </div>
-        <nav className="flex flex-wrap items-center gap-2" aria-label="Task views">
-          <button className={buttonClass(route === "main")} onClick={() => setRoute("main")}>
-            <Inbox size={16} />
-            Main
-          </button>
-          <button className={buttonClass(route === "archived")} onClick={() => setRoute("archived")}>
-            <Archive size={16} />
-            Archived
-          </button>
-        </nav>
-      </header>
+    <AppStateContext.Provider value={context}>
+      <main className="mx-auto max-w-6xl p-4 md:p-8">
+        <Outlet />
+      </main>
+    </AppStateContext.Provider>
+  );
+}
 
-      {route === "main" ? (
-        <>
-          <TaskComposer onAdd={addTask} />
-          <section className="my-4 mb-7 flex flex-col gap-2 md:flex-row md:items-end md:justify-between" aria-label="Main View controls">
-            <SegmentedControl label="Task Filter" values={filters} value={filter} onChange={setFilter} />
-            <label className="grid gap-1.5">
-              <span className="text-xs font-bold text-slate-500">Task Sort</span>
-              <select className={fieldClass} value={sort} onChange={(event) => setSort(event.target.value as TaskSort)}>
-                {sorts.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </label>
-            <label className="inline-flex min-h-10 items-center gap-2 font-semibold text-slate-500">
-              <input
-                checked={showCompleted}
-                className="w-auto accent-teal-600"
-                onChange={(event) => setShowCompleted(event.target.checked)}
-                type="checkbox"
-              />
-              <span>Completed Section</span>
-            </label>
-          </section>
+function useAppState(): AppContext {
+  const context = React.useContext(AppStateContext);
+  if (!context) {
+    throw new Error("App state is only available inside AppShell.");
+  }
+  return context;
+}
 
-          <TaskList
-            title="Active"
-            tasks={mainView.activeTasks}
-            today={today}
-            emptyText="No Active Tasks match this filter."
-            onDelete={deleteTask}
-            onMove={moveTask}
-            onUpdate={updateTask}
+function AppHeader({ title }: { title: string }) {
+  return (
+    <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div>
+        <p className="mb-1 text-xs font-bold text-slate-500">Todo by AI</p>
+        <h1 className="text-3xl font-bold leading-tight tracking-normal text-slate-950">{title}</h1>
+      </div>
+      <nav className="flex flex-wrap items-center gap-2" aria-label="Task views">
+        <Link activeProps={{ className: buttonClass(true) }} className={buttonClass()} to="/">
+          <Inbox size={16} />
+          Main
+        </Link>
+        <Link activeProps={{ className: buttonClass(true) }} className={buttonClass()} to="/archive">
+          <Archive size={16} />
+          Archived
+        </Link>
+      </nav>
+    </header>
+  );
+}
+
+function MainViewRoute() {
+  const { tasks, addTask, updateTask, moveTask, deleteTask, today } = useAppState();
+  const [filter, setFilter] = useState<TaskFilter>("All");
+  const [sort, setSort] = useState<TaskSort>("Newest");
+  const [showCompleted, setShowCompleted] = useState(true);
+
+  const mainView = useMemo(() => {
+    const visible = tasks.filter((task) => task.taskState !== "Archived").filter((task) => matchesTaskFilter(task, filter, today));
+    return {
+      activeTasks: sortActiveTasks(
+        visible.filter((task) => task.taskState === "Active"),
+        sort,
+      ),
+      completedTasks: sortCompletedTasks(visible.filter((task) => task.taskState === "Completed")),
+    };
+  }, [filter, sort, tasks, today]);
+
+  return (
+    <>
+      <AppHeader title="Main View" />
+      <TaskComposer onAdd={addTask} />
+      <section className="my-4 mb-7 flex flex-col gap-2 md:flex-row md:items-end md:justify-between" aria-label="Main View controls">
+        <SegmentedControl label="Task Filter" values={filters} value={filter} onChange={setFilter} />
+        <label className="grid gap-1.5">
+          <span className="text-xs font-bold text-slate-500">Task Sort</span>
+          <select className={fieldClass} value={sort} onChange={(event) => setSort(event.target.value as TaskSort)}>
+            {sorts.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+        </label>
+        <label className="inline-flex min-h-10 items-center gap-2 font-semibold text-slate-500">
+          <input
+            checked={showCompleted}
+            className="w-auto accent-teal-600"
+            onChange={(event) => setShowCompleted(event.target.checked)}
+            type="checkbox"
           />
-          {showCompleted ? (
-            <TaskList
-              title="Completed"
-              tasks={mainView.completedTasks}
-              today={today}
-              emptyText="No Completed Tasks match this filter."
-              onDelete={deleteTask}
-              onMove={moveTask}
-              onUpdate={updateTask}
-            />
-          ) : null}
-        </>
-      ) : (
+          <span>Completed Section</span>
+        </label>
+      </section>
+
+      <TaskList
+        title="Active"
+        tasks={mainView.activeTasks}
+        today={today}
+        emptyText="No Active Tasks match this filter."
+        onDelete={deleteTask}
+        onMove={moveTask}
+        onUpdate={updateTask}
+      />
+      {showCompleted ? (
         <TaskList
-          title="Archived"
-          tasks={archivedTasks}
+          title="Completed"
+          tasks={mainView.completedTasks}
           today={today}
-          emptyText="No Archived Tasks yet."
+          emptyText="No Completed Tasks match this filter."
           onDelete={deleteTask}
           onMove={moveTask}
           onUpdate={updateTask}
         />
-      )}
-    </main>
+      ) : null}
+    </>
   );
+}
+
+function ArchiveViewRoute() {
+  const { tasks, updateTask, moveTask, deleteTask, today } = useAppState();
+  const archivedTasks = useMemo(() => sortCompletedTasks(tasks.filter((task) => task.taskState === "Archived")), [tasks]);
+
+  return (
+    <>
+      <AppHeader title="Archived View" />
+      <TaskList
+        title="Archived"
+        tasks={archivedTasks}
+        today={today}
+        emptyText="No Archived Tasks yet."
+        onDelete={deleteTask}
+        onMove={moveTask}
+        onUpdate={updateTask}
+      />
+    </>
+  );
+}
+
+function NotFoundRedirect() {
+  const router = useRouter();
+
+  React.useEffect(() => {
+    void router.navigate({ to: "/", replace: true });
+  }, [router]);
+
+  return null;
 }
 
 function TaskComposer({ onAdd }: { onAdd: (input: { title: string; note: string; dueDate: string }) => void }) {
@@ -398,6 +485,6 @@ function TaskRow({
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <RouterProvider router={router} />
   </React.StrictMode>,
 );
