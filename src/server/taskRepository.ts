@@ -2,22 +2,17 @@ import { createClient, type Client } from "@libsql/client";
 import {
   changeTaskState,
   createTask,
+  deriveArchivedViewTasks,
+  deriveMainViewTasks,
   editTask,
-  matchesTaskFilter,
-  sortActiveTasks,
-  sortCompletedTasks,
   type EditableTaskFields,
+  type MainViewTasks,
   type Task,
   type TaskFilter,
   type TaskSort,
   type TaskState,
   type User,
 } from "../domain/task";
-
-export type MainViewTasks = {
-  activeTasks: Task[];
-  completedTasks: Task[];
-};
 
 export type TaskRepository = {
   initialize(): Promise<void>;
@@ -93,18 +88,11 @@ class LibSqlTaskRepository implements TaskRepository {
 
   async listMainViewForUser(user: User, input: { filter: TaskFilter; sort: TaskSort; today: string }): Promise<MainViewTasks> {
     const rows = await this.listOwnedTasks(user, "task_state != 'Archived'");
-    const visible = rows.filter((task) => matchesTaskFilter(task, input.filter, input.today));
-    return {
-      activeTasks: sortActiveTasks(
-        visible.filter((task) => task.taskState === "Active"),
-        input.sort,
-      ),
-      completedTasks: sortCompletedTasks(visible.filter((task) => task.taskState === "Completed")),
-    };
+    return deriveMainViewTasks(rows, input);
   }
 
   async listArchivedForUser(user: User): Promise<Task[]> {
-    return sortCompletedTasks(await this.listOwnedTasks(user, "task_state = 'Archived'"));
+    return deriveArchivedViewTasks(await this.listOwnedTasks(user, "task_state = 'Archived'"));
   }
 
   private async getOwnedTask(user: User, taskId: string): Promise<Task> {

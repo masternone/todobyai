@@ -5,12 +5,11 @@ import { Link, Outlet, RouterProvider, createRoute, createRootRoute, createRoute
 import {
   changeTaskState,
   createTask,
+  deriveArchivedViewTasks,
+  deriveMainViewTasks,
   editTask,
   isDueToday,
   isPastDue,
-  matchesTaskFilter,
-  sortActiveTasks,
-  sortCompletedTasks,
   type Task,
   type TaskFilter,
   type TaskSort,
@@ -174,16 +173,7 @@ function MainViewRoute() {
   const [sort, setSort] = useState<TaskSort>("Newest");
   const [showCompleted, setShowCompleted] = useState(true);
 
-  const mainView = useMemo(() => {
-    const visible = tasks.filter((task) => task.taskState !== "Archived").filter((task) => matchesTaskFilter(task, filter, today));
-    return {
-      activeTasks: sortActiveTasks(
-        visible.filter((task) => task.taskState === "Active"),
-        sort,
-      ),
-      completedTasks: sortCompletedTasks(visible.filter((task) => task.taskState === "Completed")),
-    };
-  }, [filter, sort, tasks, today]);
+  const mainView = useMemo(() => deriveMainViewTasks(tasks, { filter, sort, today }), [filter, sort, tasks, today]);
 
   return (
     <>
@@ -236,7 +226,7 @@ function MainViewRoute() {
 
 function ArchiveViewRoute() {
   const { tasks, updateTask, moveTask, deleteTask, today } = useAppState();
-  const archivedTasks = useMemo(() => sortCompletedTasks(tasks.filter((task) => task.taskState === "Archived")), [tasks]);
+  const archivedTasks = useMemo(() => deriveArchivedViewTasks(tasks), [tasks]);
 
   return (
     <>

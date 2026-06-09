@@ -23,6 +23,11 @@ export type EditableTaskFields = {
   dueDate?: string | null;
 };
 
+export type MainViewTasks = {
+  activeTasks: Task[];
+  completedTasks: Task[];
+};
+
 const allowedTransitions: Record<TaskState, TaskState[]> = {
   Active: ["Completed", "Archived"],
   Completed: ["Active", "Archived"],
@@ -111,6 +116,21 @@ export function sortActiveTasks(tasks: Task[], sort: TaskSort): Task[] {
 
 export function sortCompletedTasks(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => compareDesc(a.modifiedDate, b.modifiedDate));
+}
+
+export function deriveMainViewTasks(tasks: Task[], input: { filter: TaskFilter; sort: TaskSort; today: string }): MainViewTasks {
+  const visible = tasks.filter((task) => task.taskState !== "Archived").filter((task) => matchesTaskFilter(task, input.filter, input.today));
+  return {
+    activeTasks: sortActiveTasks(
+      visible.filter((task) => task.taskState === "Active"),
+      input.sort,
+    ),
+    completedTasks: sortCompletedTasks(visible.filter((task) => task.taskState === "Completed")),
+  };
+}
+
+export function deriveArchivedViewTasks(tasks: Task[]): Task[] {
+  return sortCompletedTasks(tasks.filter((task) => task.taskState === "Archived"));
 }
 
 function compareAsc(a: string, b: string): number {
