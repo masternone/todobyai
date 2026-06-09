@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Archive, Check, Edit3, Inbox, RotateCcw, Save, Trash2, X } from "lucide-react";
-import { Link, Outlet, RouterProvider, createRoute, createRootRoute, createRouter, useRouter } from "@tanstack/react-router";
+import { Link, Outlet, RouterProvider, createRoute, createRootRoute, createRouter, useLocation, useRouter } from "@tanstack/react-router";
 import {
   changeTaskState,
   createTask,
@@ -147,6 +147,8 @@ function useAppState(): AppContext {
 }
 
 function AppHeader({ title }: { title: string }) {
+  const pathname = useLocation({ select: (location) => location.pathname });
+
   return (
     <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div>
@@ -154,11 +156,11 @@ function AppHeader({ title }: { title: string }) {
         <h1 className="text-3xl font-bold leading-tight tracking-normal text-slate-950">{title}</h1>
       </div>
       <nav className="flex flex-wrap items-center gap-2" aria-label="Task views">
-        <Link activeProps={{ className: buttonClass(true) }} className={buttonClass()} to="/">
+        <Link className={buttonClass(pathname === "/")} to="/">
           <Inbox size={16} />
           Main
         </Link>
-        <Link activeProps={{ className: buttonClass(true) }} className={buttonClass()} to="/archive">
+        <Link className={buttonClass(pathname === "/archive")} to="/archive">
           <Archive size={16} />
           Archived
         </Link>
