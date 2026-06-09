@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+body {
+  min-width: 320px;
+  background: var(--color-slate-100);
+  color: var(--color-slate-900);
+}
