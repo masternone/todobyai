@@ -55,7 +55,7 @@ test("creates Tasks across required and optional fields, filters them, changes T
 
   await completeTask(page, tasks[1].title);
   await completeTask(page, tasks[2].title);
-  await page.getByLabel("Completed Section").check();
+  await page.getByLabel("Show completed").check();
   await expect(taskList(page, "Completed").getByText(tasks[1].title)).toBeVisible();
   await expect(taskList(page, "Completed").getByText(tasks[2].title)).toBeVisible();
 
@@ -66,7 +66,7 @@ test("creates Tasks across required and optional fields, filters them, changes T
   await expect(taskRow(page, tasks[1].title)).toBeVisible();
   await restoreTask(page, tasks[1].title, { leavesCurrentView: true });
   await page.getByRole("link", { name: "Main" }).click();
-  await page.getByLabel("Completed Section").check();
+  await page.getByLabel("Show completed").check();
   await restoreTask(page, tasks[2].title, { leavesCurrentView: false });
   await expect(taskList(page, "Active").getByText(tasks[1].title)).toBeVisible();
   await expect(taskList(page, "Active").getByText(tasks[2].title)).toBeVisible();

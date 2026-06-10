@@ -85,7 +85,7 @@ export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode 
       } catch (error) {
         if (!cancelled) {
           setLoadState("failed");
-          setErrorMessage(error instanceof Error ? error.message : "Could not load Tasks.");
+          setErrorMessage(error instanceof Error ? error.message : "Could not load tasks.");
         }
       }
     }
@@ -116,7 +116,7 @@ export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode 
   }
 
   async function deleteTask(taskId: string) {
-    const confirmed = window.confirm("Delete this Task permanently? This cannot be undone.");
+    const confirmed = window.confirm("Delete this task permanently? This cannot be undone.");
     if (confirmed) {
       await taskClient.deleteTask(taskId);
       setTasks((current) => current.filter((task) => task.id !== taskId));
@@ -137,7 +137,7 @@ export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode 
     <AppStateContext.Provider value={context}>
       <main className="mx-auto max-w-6xl p-4 md:p-8">
         {loadState === "failed" ? (
-          <p className="py-8 text-danger">{errorMessage ?? "Could not load Tasks."}</p>
+          <p className="py-8 text-danger">{errorMessage ?? "Could not load tasks."}</p>
         ) : null}
         {loadState !== "failed" ? children : null}
       </main>
@@ -210,10 +210,7 @@ export function MainViewRoute() {
           }}
         />
       ) : null}
-      <section
-        className="my-4 mb-7 flex flex-col gap-2 md:flex-row md:items-end md:justify-between"
-        aria-label="Main View controls"
-      >
+      <section className="task-controls" aria-label="Main View controls">
         <button
           className={buttonClass(true)}
           disabled={isLoadingTasks}
@@ -237,7 +234,7 @@ export function MainViewRoute() {
             onChange={(event) => setShowCompleted(event.target.checked)}
             type="checkbox"
           />
-          <span>Completed Section</span>
+          <span>Show completed</span>
         </label>
       </section>
 
@@ -246,7 +243,7 @@ export function MainViewRoute() {
         title="Active"
         tasks={mainView.activeTasks}
         today={today}
-        emptyText="No Active Tasks match this filter."
+        emptyText="No active tasks match this filter."
         onDelete={deleteTask}
         onMove={moveTask}
         onUpdate={updateTask}
@@ -257,7 +254,7 @@ export function MainViewRoute() {
           title="Completed"
           tasks={mainView.completedTasks}
           today={today}
-          emptyText="No Completed Tasks match this filter."
+          emptyText="No completed tasks match this filter."
           onDelete={deleteTask}
           onMove={moveTask}
           onUpdate={updateTask}
@@ -276,7 +273,7 @@ export function ArchiveViewRoute() {
     <>
       <AppHeader title="Archived View" />
       <section
-        className="my-4 mb-7 flex flex-col gap-2 md:flex-row md:items-end md:justify-end"
+        className="my-4 mb-7 grid gap-3 md:flex md:items-end md:justify-end"
         aria-label="Archived View controls"
       >
         <TaskSortSelect value={sort} onChange={setSort} />
@@ -286,7 +283,7 @@ export function ArchiveViewRoute() {
         title="Archived"
         tasks={archivedTasks}
         today={today}
-        emptyText="No Archived Tasks yet."
+        emptyText="No archived tasks yet."
         onDelete={deleteTask}
         onMove={moveTask}
         onUpdate={updateTask}
@@ -401,6 +398,13 @@ function TaskComposerDialog({
   onCreated: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const hasDraftContent = Boolean(draft.title.trim() || draft.note.trim() || draft.dueDate);
+
+  function requestClose() {
+    if (!hasDraftContent || window.confirm("Discard this unsaved task draft?")) {
+      onClose();
+    }
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -413,10 +417,13 @@ function TaskComposerDialog({
     <dialog
       aria-labelledby="task-composer-title"
       className="m-0 h-full max-h-none w-full max-w-none border-0 bg-transparent p-4 backdrop:bg-ink-strong/40 open:grid open:place-items-center"
-      onCancel={onClose}
+      onCancel={(event) => {
+        event.preventDefault();
+        requestClose();
+      }}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
-          onClose();
+          requestClose();
         }
       }}
       ref={dialogRef}
@@ -429,7 +436,7 @@ function TaskComposerDialog({
           <button
             aria-label="Close Dialog"
             className={iconButton}
-            onClick={onClose}
+            onClick={requestClose}
             title="Close Dialog"
             type="button"
           >
@@ -546,17 +553,14 @@ function TaskListSkeleton() {
   return (
     <div className="mt-3 grid gap-2" aria-label="Loading Tasks">
       {[0, 1, 2].map((item) => (
-        <article
-          className="flex animate-pulse flex-wrap items-start gap-3 rounded-lg border border-rule bg-surface p-3 md:flex-nowrap"
-          key={item}
-        >
+        <article className="task-row task-row--skeleton animate-pulse" key={item}>
           <div className="h-11 w-11 shrink-0 rounded-md border border-rule-soft bg-app-canvas" />
-          <div className="min-w-0 flex-1 pt-1">
+          <div className="task-row__content pt-1">
             <div className="h-4 w-2/3 max-w-80 rounded bg-rule-soft" />
             <div className="mt-3 h-3 w-full max-w-xl rounded bg-app-canvas" />
             <div className="mt-2 h-3 w-36 rounded bg-app-canvas" />
           </div>
-          <div className="ml-11 flex gap-1.5 md:ml-0">
+          <div className="task-row__actions">
             <div className="h-11 w-11 rounded-md border border-rule-soft bg-app-canvas" />
             <div className="h-11 w-11 rounded-md border border-rule-soft bg-app-canvas" />
             <div className="h-11 w-11 rounded-md border border-rule-soft bg-app-canvas" />
@@ -587,21 +591,31 @@ function TaskRow({
   const [title, setTitle] = useState(task.title);
   const [note, setNote] = useState(task.note ?? "");
   const [dueDate, setDueDate] = useState(task.dueDate ?? "");
+  const [showTitleRequired, setShowTitleRequired] = useState(false);
   const pastDue = isPastDue(task, today);
   const dueToday = isDueToday(task, today);
+  const titleErrorId = `task-${task.id}-title-error`;
+  const titleMissing = !title.trim();
 
   async function save() {
+    if (titleMissing) {
+      setShowTitleRequired(true);
+      return;
+    }
     await onUpdate(task.id, { title, note, dueDate });
     setEditing(false);
   }
 
+  function cancelEdit() {
+    setTitle(task.title);
+    setNote(task.note ?? "");
+    setDueDate(task.dueDate ?? "");
+    setShowTitleRequired(false);
+    setEditing(false);
+  }
+
   return (
-    <article
-      className={cx(
-        "flex flex-wrap items-start gap-3 rounded-lg border border-rule bg-surface p-3 md:flex-nowrap",
-        pastDue && "bg-danger-soft",
-      )}
-    >
+    <article className={cx("task-row", pastDue && "bg-danger-soft")}>
       <button
         className={cx(
           taskCheckButton,
@@ -615,15 +629,30 @@ function TaskRow({
       >
         {task.taskState === "Active" ? null : <Check size={22} strokeWidth={2.5} />}
       </button>
-      <div className="min-w-0 flex-1">
+      <div className="task-row__content">
         {editing ? (
-          <div className="grid gap-2 lg:grid-cols-3">
-            <input
-              className={fieldClass}
-              aria-label="Title"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-            />
+          <div className="task-row__edit-fields">
+            <label className="grid gap-1.5">
+              <input
+                aria-describedby={showTitleRequired ? titleErrorId : undefined}
+                aria-invalid={showTitleRequired}
+                aria-label="Title"
+                className={fieldClass}
+                value={title}
+                onBlur={() => setShowTitleRequired(titleMissing)}
+                onChange={(event) => {
+                  setShowTitleRequired(false);
+                  setTitle(event.target.value);
+                }}
+              />
+              <span
+                className="min-h-5 text-sm font-semibold text-danger"
+                id={titleErrorId}
+                role={showTitleRequired ? "alert" : undefined}
+              >
+                {showTitleRequired ? "Title is required." : null}
+              </span>
+            </label>
             <input
               className={fieldClass}
               aria-label="Note"
@@ -669,7 +698,7 @@ function TaskRow({
           </>
         )}
       </div>
-      <div className="ml-11 flex gap-1.5 md:ml-0">
+      <div className="task-row__actions">
         {editing ? (
           <>
             <button
@@ -683,7 +712,7 @@ function TaskRow({
             <button
               aria-label="Cancel Edit"
               className={iconButton}
-              onClick={() => setEditing(false)}
+              onClick={cancelEdit}
               title="Cancel Edit"
             >
               <X size={16} />
