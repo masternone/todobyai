@@ -49,6 +49,22 @@ function buttonClass(active = false): string {
   return cx(buttonShape, active ? activeButton : inactiveButton);
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function taskSortSelectMarkup(value: TaskSort): { __html: string } {
+  const optionMarkup = sorts.map((item) => `<option value="${item}">${item}</option>`).join("");
+  const selectedValue = escapeHtml(value);
+  return {
+    __html: `<button type="button"><selectedcontent hidden></selectedcontent><span class="task-sort-select__value">${selectedValue}</span></button>${optionMarkup}`,
+  };
+}
+
 export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode }>) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "loaded" | "failed">("loading");
@@ -213,18 +229,7 @@ export function MainViewRoute() {
           value={filter}
           onChange={setFilter}
         />
-        <label className="grid gap-1.5">
-          <span className="text-xs font-bold text-ink-muted">Task Sort</span>
-          <select
-            className={fieldClass}
-            value={sort}
-            onChange={(event) => setSort(event.target.value as TaskSort)}
-          >
-            {sorts.map((item) => (
-              <option key={item}>{item}</option>
-            ))}
-          </select>
-        </label>
+        <TaskSortSelect value={sort} onChange={setSort} />
         <label className="inline-flex min-h-11 items-center gap-2 font-semibold text-ink-muted">
           <input
             checked={showCompleted}
@@ -274,18 +279,7 @@ export function ArchiveViewRoute() {
         className="my-4 mb-7 flex flex-col gap-2 md:flex-row md:items-end md:justify-end"
         aria-label="Archived View controls"
       >
-        <label className="grid gap-1.5">
-          <span className="text-xs font-bold text-ink-muted">Task Sort</span>
-          <select
-            className={fieldClass}
-            value={sort}
-            onChange={(event) => setSort(event.target.value as TaskSort)}
-          >
-            {sorts.map((item) => (
-              <option key={item}>{item}</option>
-            ))}
-          </select>
-        </label>
+        <TaskSortSelect value={sort} onChange={setSort} />
       </section>
       <TaskList
         isLoading={isLoadingTasks}
@@ -481,6 +475,27 @@ function SegmentedControl<T extends string>({
         ))}
       </div>
     </div>
+  );
+}
+
+function TaskSortSelect({
+  value,
+  onChange,
+}: {
+  value: TaskSort;
+  onChange: (value: TaskSort) => void;
+}) {
+  return (
+    <label className="task-sort-select grid gap-1.5">
+      <span className="text-xs font-bold text-ink-muted">Task Sort</span>
+      <select
+        className={cx(fieldClass, "task-sort-select__control task-sort-select__control--custom")}
+        value={value}
+        onChange={(event) => onChange(event.target.value as TaskSort)}
+        dangerouslySetInnerHTML={taskSortSelectMarkup(value)}
+        suppressHydrationWarning
+      />
+    </label>
   );
 }
 

@@ -20,3 +20,98 @@ body {
   min-width: 320px;
   @apply bg-app-canvas text-ink;
 }
+
+.task-sort-select {
+  min-inline-size: min(100%, 13.5rem);
+}
+
+.task-sort-select__control {
+  color-scheme: light;
+  cursor: pointer;
+  padding-inline-end: 2.25rem;
+}
+
+.task-sort-select__control:disabled {
+  cursor: not-allowed;
+}
+
+@supports (appearance: base-select) {
+  .task-sort-select__control--custom,
+  .task-sort-select__control--custom::picker(select) {
+    appearance: base-select;
+  }
+
+  .task-sort-select__control--custom {
+    block-size: 2.75rem;
+    inline-size: 100%;
+    padding: 0;
+    overflow: clip;
+    position: relative;
+  }
+
+  .task-sort-select__control--custom button {
+    display: grid;
+    block-size: 100%;
+    align-items: center;
+    inline-size: 100%;
+    padding-inline: 0.75rem 2.5rem;
+    color: inherit;
+    text-align: start;
+  }
+
+  .task-sort-select__control--custom selectedcontent,
+  .task-sort-select__value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .task-sort-select__control--custom::picker-icon {
+    block-size: 0.5rem;
+    border-block-end: 2px solid var(--color-ink-muted);
+    border-inline-end: 2px solid var(--color-ink-muted);
+    content: "";
+    inline-size: 0.5rem;
+    inset-block-start: 50%;
+    inset-inline-end: 0.875rem;
+    position: absolute;
+    rotate: 45deg;
+    translate: 0 -50%;
+    transition: rotate 150ms ease-out;
+  }
+
+  .task-sort-select__control--custom:open::picker-icon {
+    rotate: 225deg;
+  }
+
+  .task-sort-select__control--custom::picker(select) {
+    margin-block-start: 0.375rem;
+    border: 1px solid var(--color-rule);
+    border-radius: 0.375rem;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    box-shadow:
+      0 10px 15px -3px oklch(18.2% 0.03 255 / 0.1),
+      0 4px 6px -4px oklch(18.2% 0.03 255 / 0.1);
+  }
+
+  .task-sort-select__control--custom option {
+    min-block-size: 2.5rem;
+    padding: 0.625rem 0.75rem;
+    font-weight: 600;
+  }
+
+  .task-sort-select__control--custom option:hover,
+  .task-sort-select__control--custom option:focus {
+    background: var(--color-app-canvas);
+  }
+
+  .task-sort-select__control--custom option:checked {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-hover);
+  }
+
+  .task-sort-select__control--custom option::checkmark {
+    color: var(--color-accent);
+  }
+}
