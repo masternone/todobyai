@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Archive, Check, Edit3, Inbox, RotateCcw, Save, Trash2, X } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Archive, Check, Edit3, Inbox, Plus, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   deriveArchivedViewTasks,
@@ -28,6 +28,7 @@ const fieldClass =
 
 type AppContext = {
   tasks: Task[];
+  isLoadingTasks: boolean;
   addTask: (input: { title: string; note: string; dueDate: string }) => Promise<void>;
   updateTask: (
     taskId: string,
@@ -108,6 +109,7 @@ export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode 
 
   const context: AppContext = {
     tasks,
+    isLoadingTasks: loadState === "loading",
     addTask,
     updateTask,
     moveTask,
@@ -118,11 +120,10 @@ export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode 
   return (
     <AppStateContext.Provider value={context}>
       <main className="mx-auto max-w-6xl p-4 md:p-8">
-        {loadState === "loading" ? <p className="py-8 text-slate-500">Loading Tasks...</p> : null}
         {loadState === "failed" ? (
           <p className="py-8 text-rose-700">{errorMessage ?? "Could not load Tasks."}</p>
         ) : null}
-        {loadState === "loaded" ? children : null}
+        {loadState !== "failed" ? children : null}
       </main>
     </AppStateContext.Provider>
   );
@@ -160,10 +161,12 @@ function AppHeader({ title }: { title: string }) {
 }
 
 export function MainViewRoute() {
-  const { tasks, addTask, updateTask, moveTask, deleteTask, today } = useAppState();
+  const { tasks, isLoadingTasks, addTask, updateTask, moveTask, deleteTask, today } = useAppState();
   const [filter, setFilter] = useState<TaskFilter>("All");
   const [sort, setSort] = useState<TaskSort>("Newest");
-  const [showCompleted, setShowCompleted] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerDraft, setComposerDraft] = useState({ title: "", note: "", dueDate: "" });
 
   const mainView = useMemo(
     () => deriveMainViewTasks(tasks, { filter, sort, today }),
@@ -173,11 +176,35 @@ export function MainViewRoute() {
   return (
     <>
       <AppHeader title="Main View" />
-      <TaskComposer onAdd={addTask} />
+      {composerOpen ? (
+        <TaskComposerDialog
+          draft={composerDraft}
+          onAdd={addTask}
+          onCancel={() => {
+            setComposerDraft({ title: "", note: "", dueDate: "" });
+            setComposerOpen(false);
+          }}
+          onChange={setComposerDraft}
+          onClose={() => setComposerOpen(false)}
+          onCreated={() => {
+            setComposerDraft({ title: "", note: "", dueDate: "" });
+            setComposerOpen(false);
+          }}
+        />
+      ) : null}
       <section
         className="my-4 mb-7 flex flex-col gap-2 md:flex-row md:items-end md:justify-between"
         aria-label="Main View controls"
       >
+        <button
+          className={buttonClass(true)}
+          disabled={isLoadingTasks}
+          onClick={() => setComposerOpen(true)}
+          type="button"
+        >
+          <Plus size={16} />
+          Add Task
+        </button>
         <SegmentedControl
           label="Task Filter"
           values={filters}
@@ -208,6 +235,7 @@ export function MainViewRoute() {
       </section>
 
       <TaskList
+        isLoading={isLoadingTasks}
         title="Active"
         tasks={mainView.activeTasks}
         today={today}
@@ -218,6 +246,7 @@ export function MainViewRoute() {
       />
       {showCompleted ? (
         <TaskList
+          isLoading={isLoadingTasks}
           title="Completed"
           tasks={mainView.completedTasks}
           today={today}
@@ -232,7 +261,7 @@ export function MainViewRoute() {
 }
 
 export function ArchiveViewRoute() {
-  const { tasks, updateTask, moveTask, deleteTask, today } = useAppState();
+  const { tasks, isLoadingTasks, updateTask, moveTask, deleteTask, today } = useAppState();
   const [sort, setSort] = useState<TaskSort>("Recently Modified");
   const archivedTasks = useMemo(() => deriveArchivedViewTasks(tasks, sort), [sort, tasks]);
 
@@ -257,6 +286,7 @@ export function ArchiveViewRoute() {
         </label>
       </section>
       <TaskList
+        isLoading={isLoadingTasks}
         title="Archived"
         tasks={archivedTasks}
         today={today}
@@ -270,60 +300,129 @@ export function ArchiveViewRoute() {
 }
 
 function TaskComposer({
+  draft,
   onAdd,
+  onCancel,
+  onChange,
+  onCreated,
 }: {
+  draft: { title: string; note: string; dueDate: string };
   onAdd: (input: { title: string; note: string; dueDate: string }) => Promise<void>;
+  onCancel: () => void;
+  onChange: (draft: { title: string; note: string; dueDate: string }) => void;
+  onCreated?: () => void;
 }) {
-  const [title, setTitle] = useState("");
-  const [note, setNote] = useState("");
-  const [dueDate, setDueDate] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!title.trim() || saving) return;
+    if (!draft.title.trim() || saving) return;
     setSaving(true);
     try {
-      await onAdd({ title, note, dueDate });
-      setTitle("");
-      setNote("");
-      setDueDate("");
+      await onAdd(draft);
+      onCreated?.();
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <form
-      className="grid items-center gap-2 rounded-lg border border-slate-300 bg-white p-3 lg:grid-cols-4"
-      onSubmit={submit}
-    >
-      <input
-        aria-label="Title"
-        className={fieldClass}
-        placeholder="Task title"
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-      />
-      <input
+    <form className="grid gap-3" onSubmit={submit}>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <input
+          aria-label="Title"
+          className={fieldClass}
+          placeholder="Task title"
+          value={draft.title}
+          onChange={(event) => onChange({ ...draft, title: event.target.value })}
+        />
+        <input
+          aria-label="Due Date"
+          className={fieldClass}
+          type="date"
+          value={draft.dueDate}
+          onChange={(event) => onChange({ ...draft, dueDate: event.target.value })}
+        />
+      </div>
+      <textarea
         aria-label="Note"
-        className={fieldClass}
-        placeholder="Note"
-        value={note}
-        onChange={(event) => setNote(event.target.value)}
+        className={cx(fieldClass, "min-h-32 resize-y py-2")}
+        placeholder="Add useful context, constraints, links, reminders, or the next small step for this Task."
+        value={draft.note}
+        onChange={(event) => onChange({ ...draft, note: event.target.value })}
       />
-      <input
-        aria-label="Due Date"
-        className={fieldClass}
-        type="date"
-        value={dueDate}
-        onChange={(event) => setDueDate(event.target.value)}
-      />
-      <button className={buttonClass(true)} disabled={!title.trim() || saving} type="submit">
-        <Save size={16} />
-        Create
-      </button>
+      <div className="flex flex-wrap justify-end gap-2">
+        <button className={buttonClass(false)} onClick={onCancel} type="button">
+          <X size={16} />
+          Cancel
+        </button>
+        <button
+          className={buttonClass(true)}
+          disabled={!draft.title.trim() || saving}
+          type="submit"
+        >
+          <Save size={16} />
+          Create
+        </button>
+      </div>
     </form>
+  );
+}
+
+function TaskComposerDialog({
+  draft,
+  onAdd,
+  onCancel,
+  onChange,
+  onClose,
+  onCreated,
+}: {
+  draft: { title: string; note: string; dueDate: string };
+  onAdd: (input: { title: string; note: string; dueDate: string }) => Promise<void>;
+  onCancel: () => void;
+  onChange: (draft: { title: string; note: string; dueDate: string }) => void;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.open) {
+      dialog.showModal();
+    }
+  }, []);
+
+  return (
+    <dialog
+      aria-labelledby="task-composer-title"
+      className="m-0 h-full max-h-none w-full max-w-none border-0 bg-transparent p-4 backdrop:bg-slate-950/40 open:grid open:place-items-center"
+      onCancel={onClose}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+      ref={dialogRef}
+    >
+      <div className="w-full max-w-xl rounded-lg border border-slate-300 bg-white p-4 text-slate-900 shadow-xl">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-bold text-slate-950" id="task-composer-title">
+            Add Task
+          </h2>
+          <button className={iconButton} onClick={onClose} title="Close Dialog" type="button">
+            <X size={16} />
+          </button>
+        </div>
+        <TaskComposer
+          draft={draft}
+          onAdd={onAdd}
+          onCancel={onCancel}
+          onChange={onChange}
+          onCreated={onCreated}
+        />
+      </div>
+    </dialog>
   );
 }
 
@@ -358,6 +457,7 @@ function SegmentedControl<T extends string>({
 }
 
 function TaskList(props: {
+  isLoading: boolean;
   title: string;
   tasks: Task[];
   today: string;
@@ -370,12 +470,16 @@ function TaskList(props: {
   ) => Promise<void>;
 }) {
   return (
-    <section className="mt-6">
+    <section aria-busy={props.isLoading} className="mt-6">
       <div className="flex items-center justify-between border-b border-slate-300 pb-2">
         <h2 className="text-lg font-bold text-slate-950">{props.title}</h2>
-        <span className="text-slate-500 tabular-nums">{props.tasks.length}</span>
+        <span className="text-slate-500 tabular-nums">
+          {props.isLoading ? "..." : props.tasks.length}
+        </span>
       </div>
-      {props.tasks.length ? (
+      {props.isLoading ? (
+        <TaskListSkeleton />
+      ) : props.tasks.length ? (
         <div className="mt-3 grid gap-2">
           {props.tasks.map((task) => (
             <TaskRow
@@ -392,6 +496,31 @@ function TaskList(props: {
         <p className="py-4 text-slate-500">{props.emptyText}</p>
       )}
     </section>
+  );
+}
+
+function TaskListSkeleton() {
+  return (
+    <div className="mt-3 grid gap-2" aria-label="Loading Tasks">
+      {[0, 1, 2].map((item) => (
+        <article
+          className="flex animate-pulse flex-wrap items-start gap-3 rounded-lg border border-slate-300 bg-white p-3 md:flex-nowrap"
+          key={item}
+        >
+          <div className="h-10 w-10 shrink-0 rounded-md border border-slate-200 bg-slate-100" />
+          <div className="min-w-0 flex-1 pt-1">
+            <div className="h-4 w-2/3 max-w-80 rounded bg-slate-200" />
+            <div className="mt-3 h-3 w-full max-w-xl rounded bg-slate-100" />
+            <div className="mt-2 h-3 w-36 rounded bg-slate-100" />
+          </div>
+          <div className="ml-11 flex gap-1.5 md:ml-0">
+            <div className="h-10 w-10 rounded-md border border-slate-200 bg-slate-100" />
+            <div className="h-10 w-10 rounded-md border border-slate-200 bg-slate-100" />
+            <div className="h-10 w-10 rounded-md border border-slate-200 bg-slate-100" />
+          </div>
+        </article>
+      ))}
+    </div>
   );
 }
 
