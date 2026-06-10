@@ -17,14 +17,14 @@ import "./styles.css";
 const filters: TaskFilter[] = ["All", "Past Due", "Due Today"];
 const sorts: TaskSort[] = ["Newest", "Oldest", "Recently Modified", "By Due Date"];
 const buttonShape =
-  "inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-md border px-3 transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 disabled:cursor-not-allowed disabled:opacity-50";
-const inactiveButton = "border-slate-300 bg-white text-slate-900 hover:bg-slate-100";
-const activeButton = "border-teal-600 bg-teal-600 text-white hover:bg-teal-700";
-const iconButton = `${buttonShape} ${inactiveButton} h-10 min-h-10 w-10 p-0`;
+  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-semibold transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50";
+const inactiveButton = "border-rule bg-surface text-ink hover:bg-app-canvas";
+const activeButton = "border-accent bg-accent text-surface hover:bg-accent-hover";
+const iconButton = `${buttonShape} ${inactiveButton} h-11 min-h-11 w-11 p-0`;
 const taskCheckButton =
-  "inline-flex h-10 min-h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md border transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600";
+  "inline-flex h-11 min-h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-md border transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 const fieldClass =
-  "min-h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-slate-900 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600";
+  "min-h-11 w-full rounded-md border border-rule bg-surface px-3 text-ink focus:outline-2 focus:outline-offset-2 focus:outline-accent";
 
 type AppContext = {
   tasks: Task[];
@@ -121,7 +121,7 @@ export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode 
     <AppStateContext.Provider value={context}>
       <main className="mx-auto max-w-6xl p-4 md:p-8">
         {loadState === "failed" ? (
-          <p className="py-8 text-rose-700">{errorMessage ?? "Could not load Tasks."}</p>
+          <p className="py-8 text-danger">{errorMessage ?? "Could not load Tasks."}</p>
         ) : null}
         {loadState !== "failed" ? children : null}
       </main>
@@ -143,8 +143,10 @@ function AppHeader({ title }: { title: string }) {
   return (
     <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div>
-        <p className="mb-1 text-xs font-bold text-slate-500">Todo by AI</p>
-        <h1 className="text-3xl font-bold leading-tight tracking-normal text-slate-950">{title}</h1>
+        <p className="mb-1 text-xs font-bold text-ink-muted">Todo by AI</p>
+        <h1 className="text-3xl font-bold leading-tight tracking-normal text-ink-strong">
+          {title}
+        </h1>
       </div>
       <nav className="flex flex-wrap items-center gap-2" aria-label="Task views">
         <Link className={buttonClass(pathname === "/")} to="/">
@@ -212,7 +214,7 @@ export function MainViewRoute() {
           onChange={setFilter}
         />
         <label className="grid gap-1.5">
-          <span className="text-xs font-bold text-slate-500">Task Sort</span>
+          <span className="text-xs font-bold text-ink-muted">Task Sort</span>
           <select
             className={fieldClass}
             value={sort}
@@ -223,10 +225,10 @@ export function MainViewRoute() {
             ))}
           </select>
         </label>
-        <label className="inline-flex min-h-10 items-center gap-2 font-semibold text-slate-500">
+        <label className="inline-flex min-h-11 items-center gap-2 font-semibold text-ink-muted">
           <input
             checked={showCompleted}
-            className="w-auto accent-teal-600"
+            className="h-4 w-4 accent-accent"
             onChange={(event) => setShowCompleted(event.target.checked)}
             type="checkbox"
           />
@@ -273,7 +275,7 @@ export function ArchiveViewRoute() {
         aria-label="Archived View controls"
       >
         <label className="grid gap-1.5">
-          <span className="text-xs font-bold text-slate-500">Task Sort</span>
+          <span className="text-xs font-bold text-ink-muted">Task Sort</span>
           <select
             className={fieldClass}
             value={sort}
@@ -396,7 +398,7 @@ function TaskComposerDialog({
   return (
     <dialog
       aria-labelledby="task-composer-title"
-      className="m-0 h-full max-h-none w-full max-w-none border-0 bg-transparent p-4 backdrop:bg-slate-950/40 open:grid open:place-items-center"
+      className="m-0 h-full max-h-none w-full max-w-none border-0 bg-transparent p-4 backdrop:bg-ink-strong/40 open:grid open:place-items-center"
       onCancel={onClose}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
@@ -405,12 +407,18 @@ function TaskComposerDialog({
       }}
       ref={dialogRef}
     >
-      <div className="w-full max-w-xl rounded-lg border border-slate-300 bg-white p-4 text-slate-900 shadow-xl">
+      <div className="w-full max-w-xl rounded-lg border border-rule bg-surface p-4 text-ink shadow-xl">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-bold text-slate-950" id="task-composer-title">
+          <h2 className="text-lg font-bold text-ink-strong" id="task-composer-title">
             Add Task
           </h2>
-          <button className={iconButton} onClick={onClose} title="Close Dialog" type="button">
+          <button
+            aria-label="Close Dialog"
+            className={iconButton}
+            onClick={onClose}
+            title="Close Dialog"
+            type="button"
+          >
             <X size={16} />
           </button>
         </div>
@@ -439,7 +447,7 @@ function SegmentedControl<T extends string>({
 }) {
   return (
     <div aria-label={label} className="grid gap-1.5" role="group">
-      <span className="text-xs font-bold text-slate-500">{label}</span>
+      <span className="text-xs font-bold text-ink-muted">{label}</span>
       <div className="flex flex-wrap items-center gap-2">
         {values.map((item) => (
           <button
@@ -471,9 +479,9 @@ function TaskList(props: {
 }) {
   return (
     <section aria-busy={props.isLoading} className="mt-6">
-      <div className="flex items-center justify-between border-b border-slate-300 pb-2">
-        <h2 className="text-lg font-bold text-slate-950">{props.title}</h2>
-        <span className="text-slate-500 tabular-nums">
+      <div className="flex items-center justify-between border-b border-rule pb-2">
+        <h2 className="text-lg font-bold text-ink-strong">{props.title}</h2>
+        <span className="text-ink-muted tabular-nums">
           {props.isLoading ? "..." : props.tasks.length}
         </span>
       </div>
@@ -493,7 +501,7 @@ function TaskList(props: {
           ))}
         </div>
       ) : (
-        <p className="py-4 text-slate-500">{props.emptyText}</p>
+        <p className="py-4 text-ink-muted">{props.emptyText}</p>
       )}
     </section>
   );
@@ -504,19 +512,19 @@ function TaskListSkeleton() {
     <div className="mt-3 grid gap-2" aria-label="Loading Tasks">
       {[0, 1, 2].map((item) => (
         <article
-          className="flex animate-pulse flex-wrap items-start gap-3 rounded-lg border border-slate-300 bg-white p-3 md:flex-nowrap"
+          className="flex animate-pulse flex-wrap items-start gap-3 rounded-lg border border-rule bg-surface p-3 md:flex-nowrap"
           key={item}
         >
-          <div className="h-10 w-10 shrink-0 rounded-md border border-slate-200 bg-slate-100" />
+          <div className="h-11 w-11 shrink-0 rounded-md border border-rule-soft bg-app-canvas" />
           <div className="min-w-0 flex-1 pt-1">
-            <div className="h-4 w-2/3 max-w-80 rounded bg-slate-200" />
-            <div className="mt-3 h-3 w-full max-w-xl rounded bg-slate-100" />
-            <div className="mt-2 h-3 w-36 rounded bg-slate-100" />
+            <div className="h-4 w-2/3 max-w-80 rounded bg-rule-soft" />
+            <div className="mt-3 h-3 w-full max-w-xl rounded bg-app-canvas" />
+            <div className="mt-2 h-3 w-36 rounded bg-app-canvas" />
           </div>
           <div className="ml-11 flex gap-1.5 md:ml-0">
-            <div className="h-10 w-10 rounded-md border border-slate-200 bg-slate-100" />
-            <div className="h-10 w-10 rounded-md border border-slate-200 bg-slate-100" />
-            <div className="h-10 w-10 rounded-md border border-slate-200 bg-slate-100" />
+            <div className="h-11 w-11 rounded-md border border-rule-soft bg-app-canvas" />
+            <div className="h-11 w-11 rounded-md border border-rule-soft bg-app-canvas" />
+            <div className="h-11 w-11 rounded-md border border-rule-soft bg-app-canvas" />
           </div>
         </article>
       ))}
@@ -555,17 +563,18 @@ function TaskRow({
   return (
     <article
       className={cx(
-        "flex flex-wrap items-start gap-3 rounded-lg border border-slate-300 bg-white p-3 md:flex-nowrap",
-        pastDue && "bg-rose-50",
+        "flex flex-wrap items-start gap-3 rounded-lg border border-rule bg-surface p-3 md:flex-nowrap",
+        pastDue && "bg-danger-soft",
       )}
     >
       <button
         className={cx(
           taskCheckButton,
           task.taskState === "Active"
-            ? "border-slate-300 bg-white text-slate-400 hover:border-teal-500 hover:bg-teal-50"
-            : "border-teal-600 bg-teal-600 text-white hover:bg-teal-700",
+            ? "border-rule bg-surface text-ink-muted hover:border-accent hover:bg-accent-soft"
+            : "border-accent bg-accent text-surface hover:bg-accent-hover",
         )}
+        aria-label={task.taskState === "Active" ? "Complete Task" : "Restore Task"}
         onClick={() => void onMove(task.id, task.taskState === "Active" ? "Completed" : "Active")}
         title={task.taskState === "Active" ? "Complete Task" : "Restore Task"}
       >
@@ -597,25 +606,27 @@ function TaskRow({
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-semibold text-slate-950">{task.title}</h3>
+              <h3 className="break-words font-semibold text-ink-strong">{task.title}</h3>
               {pastDue ? (
-                <span className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-700">
+                <span className="rounded-full border border-danger-rule bg-danger-soft px-2 py-0.5 text-xs font-bold text-danger">
                   Past Due
                 </span>
               ) : null}
               {dueToday ? (
-                <span className="rounded-full border border-teal-300 bg-teal-50 px-2 py-0.5 text-xs font-bold text-teal-700">
+                <span className="rounded-full border border-accent bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent-hover">
                   Due Today
                 </span>
               ) : null}
             </div>
             {task.note ? (
-              <p className="mt-1 max-w-prose leading-snug text-slate-500">{task.note}</p>
+              <p className="mt-1 max-w-prose break-words leading-snug text-ink-muted">
+                {task.note}
+              </p>
             ) : null}
             {task.dueDate ? (
               <dl className="mt-2 flex flex-wrap gap-4">
                 <div>
-                  <dt className="text-xs font-bold text-slate-500">Due Date</dt>
+                  <dt className="text-xs font-bold text-ink-muted">Due Date</dt>
                   <dd className="mt-0.5">{task.dueDate}</dd>
                 </div>
               </dl>
@@ -626,20 +637,36 @@ function TaskRow({
       <div className="ml-11 flex gap-1.5 md:ml-0">
         {editing ? (
           <>
-            <button className={iconButton} onClick={() => void save()} title="Save Task">
+            <button
+              aria-label="Save Task"
+              className={iconButton}
+              onClick={() => void save()}
+              title="Save Task"
+            >
               <Save size={16} />
             </button>
-            <button className={iconButton} onClick={() => setEditing(false)} title="Cancel Edit">
+            <button
+              aria-label="Cancel Edit"
+              className={iconButton}
+              onClick={() => setEditing(false)}
+              title="Cancel Edit"
+            >
               <X size={16} />
             </button>
           </>
         ) : (
           <>
-            <button className={iconButton} onClick={() => setEditing(true)} title="Edit Task">
+            <button
+              aria-label="Edit Task"
+              className={iconButton}
+              onClick={() => setEditing(true)}
+              title="Edit Task"
+            >
               <Edit3 size={16} />
             </button>
             {task.taskState === "Archived" ? (
               <button
+                aria-label="Restore Task"
                 className={iconButton}
                 onClick={() => void onMove(task.id, "Active")}
                 title="Restore Task"
@@ -648,6 +675,7 @@ function TaskRow({
               </button>
             ) : (
               <button
+                aria-label="Archive Task"
                 className={iconButton}
                 onClick={() => void onMove(task.id, "Archived")}
                 title="Archive Task"
@@ -656,6 +684,7 @@ function TaskRow({
               </button>
             )}
             <button
+              aria-label="Delete Task"
               className={iconButton}
               onClick={() => void onDelete(task.id)}
               title="Delete Task"
