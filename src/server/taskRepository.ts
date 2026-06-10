@@ -35,7 +35,9 @@ export function createLibSqlTaskRepository(options?: {
   url?: string;
   now?: () => Date;
 }): TaskRepository {
-  const client = createClient({ url: options?.url ?? "file:todo-by-ai.db" });
+  const client = createClient({
+    url: options?.url ?? process.env.TODO_BY_AI_DB_URL ?? "file:todo-by-ai.db",
+  });
   const now = () => (options?.now ?? (() => new Date()))().toISOString();
 
   return new LibSqlTaskRepository(client, now);

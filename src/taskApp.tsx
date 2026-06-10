@@ -315,10 +315,16 @@ function TaskComposer({
   onCreated?: () => void;
 }) {
   const [saving, setSaving] = useState(false);
+  const [showTitleRequired, setShowTitleRequired] = useState(false);
+  const titleErrorId = "task-composer-title-error";
+  const titleMissing = !draft.title.trim();
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!draft.title.trim() || saving) return;
+    if (titleMissing || saving) {
+      setShowTitleRequired(titleMissing);
+      return;
+    }
     setSaving(true);
     try {
       await onAdd(draft);
@@ -331,20 +337,38 @@ function TaskComposer({
   return (
     <form className="grid gap-3" onSubmit={submit}>
       <div className="grid gap-3 sm:grid-cols-2">
-        <input
-          aria-label="Title"
-          className={fieldClass}
-          placeholder="Task title"
-          value={draft.title}
-          onChange={(event) => onChange({ ...draft, title: event.target.value })}
-        />
-        <input
-          aria-label="Due Date"
-          className={fieldClass}
-          type="date"
-          value={draft.dueDate}
-          onChange={(event) => onChange({ ...draft, dueDate: event.target.value })}
-        />
+        <label className="grid gap-1.5">
+          <input
+            aria-describedby={showTitleRequired ? titleErrorId : undefined}
+            aria-invalid={showTitleRequired}
+            aria-label="Title"
+            className={fieldClass}
+            placeholder="Task Title (required)"
+            value={draft.title}
+            onBlur={() => setShowTitleRequired(titleMissing)}
+            onChange={(event) => {
+              setShowTitleRequired(false);
+              onChange({ ...draft, title: event.target.value });
+            }}
+          />
+          <span
+            className="min-h-5 text-sm font-semibold text-danger"
+            id={titleErrorId}
+            role={showTitleRequired ? "alert" : undefined}
+          >
+            {showTitleRequired ? "Title is required." : null}
+          </span>
+        </label>
+        <label className="grid gap-1.5">
+          <input
+            aria-label="Due Date"
+            className={fieldClass}
+            type="date"
+            value={draft.dueDate}
+            onChange={(event) => onChange({ ...draft, dueDate: event.target.value })}
+          />
+          <span className="min-h-5" aria-hidden="true" />
+        </label>
       </div>
       <textarea
         aria-label="Note"
@@ -358,11 +382,7 @@ function TaskComposer({
           <X size={16} />
           Cancel
         </button>
-        <button
-          className={buttonClass(true)}
-          disabled={!draft.title.trim() || saving}
-          type="submit"
-        >
+        <button className={buttonClass(true)} disabled={saving} type="submit">
           <Save size={16} />
           Create
         </button>
