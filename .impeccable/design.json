@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-10T00:00:00.000Z",
+  "title": "Design System: Todo by AI",
+  "extensions": {
+    "colorMeta": {
+      "app-canvas": {
+        "role": "neutral",
+        "displayName": "Workbench Canvas",
+        "canonical": "#f1f5f9",
+        "tonalRamp": [
+          "oklch(15% 0.01 250)",
+          "oklch(25% 0.01 250)",
+          "oklch(35% 0.01 250)",
+          "oklch(50% 0.01 250)",
+          "oklch(65% 0.01 250)",
+          "oklch(80% 0.01 250)",
+          "oklch(90% 0.01 250)",
+          "oklch(96% 0.01 250)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Paper Surface",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(18% 0.005 250)",
+          "oklch(30% 0.005 250)",
+          "oklch(42% 0.005 250)",
+          "oklch(56% 0.005 250)",
+          "oklch(70% 0.005 250)",
+          "oklch(84% 0.005 250)",
+          "oklch(94% 0.005 250)",
+          "oklch(99% 0.005 250)"
+        ]
+      },
+      "text-strong": {
+        "role": "neutral",
+        "displayName": "Ink Strong",
+        "canonical": "#020617",
+        "tonalRamp": [
+          "oklch(12% 0.02 250)",
+          "oklch(22% 0.02 250)",
+          "oklch(34% 0.02 250)",
+          "oklch(48% 0.02 250)",
+          "oklch(62% 0.02 250)",
+          "oklch(76% 0.02 250)",
+          "oklch(88% 0.02 250)",
+          "oklch(96% 0.02 250)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Prompt Teal",
+        "canonical": "#0d9488",
+        "tonalRamp": [
+          "oklch(18% 0.08 190)",
+          "oklch(28% 0.1 190)",
+          "oklch(38% 0.12 190)",
+          "oklch(50% 0.13 190)",
+          "oklch(62% 0.12 190)",
+          "oklch(74% 0.09 190)",
+          "oklch(86% 0.05 190)",
+          "oklch(95% 0.025 190)"
+        ]
+      },
+      "danger-text": {
+        "role": "tertiary",
+        "displayName": "Overdue Rose",
+        "canonical": "#be123c",
+        "tonalRamp": [
+          "oklch(18% 0.08 20)",
+          "oklch(28% 0.11 20)",
+          "oklch(38% 0.15 20)",
+          "oklch(50% 0.17 20)",
+          "oklch(62% 0.14 20)",
+          "oklch(74% 0.1 20)",
+          "oklch(86% 0.055 20)",
+          "oklch(95% 0.025 20)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Route titles such as Main View and Archived View."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section headings and dialog headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Task notes, due dates, empty states, and general UI text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Form labels, control labels, metadata labels, and the small brand mark."
+      }
+    },
+    "shadows": [
+      {
+        "name": "dialog-lift",
+        "value": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+        "purpose": "Clarifies modal depth against the dimmed slate backdrop."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "150ms ease-out",
+        "purpose": "Default color transition for buttons and task state controls."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action or active route/filter control.",
+      "html": "<button class=\"ds-btn-primary\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"></path><path d=\"M12 5v14\"></path></svg>Add Task</button>",
+      "css": ".ds-btn-primary { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 6px; border: 1px solid #0d9488; border-radius: 6px; background: #0d9488; color: #ffffff; padding: 0 12px; font: 600 16px/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; cursor: pointer; transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out; } .ds-btn-primary:hover { background: #0f766e; border-color: #0f766e; } .ds-btn-primary:focus-visible { outline: 2px solid #0d9488; outline-offset: 2px; } .ds-btn-primary:disabled { cursor: not-allowed; opacity: .5; } .ds-icon { width: 16px; height: 16px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Inactive navigation, secondary form action, or utility action with label.",
+      "html": "<button class=\"ds-btn-secondary\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"></path><polyline points=\"7 10 12 15 17 10\"></polyline><line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\"></line></svg>Archive</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 6px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; padding: 0 12px; font: 600 16px/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; cursor: pointer; transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out; } .ds-btn-secondary:hover { background: #f1f5f9; } .ds-btn-secondary:focus-visible { outline: 2px solid #0d9488; outline-offset: 2px; } .ds-icon { width: 16px; height: 16px; }"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Fixed-square row action for edit, archive, restore, delete, save, or close.",
+      "html": "<button class=\"ds-icon-button\" title=\"Edit Task\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 20h9\"></path><path d=\"M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z\"></path></svg></button>",
+      "css": ".ds-icon-button { display: inline-flex; width: 40px; height: 40px; min-height: 40px; align-items: center; justify-content: center; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; padding: 0; cursor: pointer; transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out; } .ds-icon-button:hover { background: #f1f5f9; } .ds-icon-button:focus-visible { outline: 2px solid #0d9488; outline-offset: 2px; } .ds-icon-button svg { width: 16px; height: 16px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Standard field vocabulary for task title, due date, note, and sort controls.",
+      "html": "<label class=\"ds-field-wrap\"><span>Task Sort</span><select class=\"ds-field\"><option>Newest</option><option>Oldest</option></select></label>",
+      "css": ".ds-field-wrap { display: grid; gap: 6px; color: #64748b; font: 700 12px/1.33 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; } .ds-field { min-height: 40px; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; padding: 0 12px; font: 400 16px/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; } .ds-field:focus { outline: 2px solid #0d9488; outline-offset: 2px; }"
+    },
+    {
+      "name": "State Badge",
+      "kind": "chip",
+      "refersTo": "task-row",
+      "description": "Small due-date status marker inside a task row.",
+      "html": "<span class=\"ds-badge ds-badge-today\">Due Today</span><span class=\"ds-badge ds-badge-past\">Past Due</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; border-radius: 9999px; padding: 2px 8px; font: 700 12px/1.33 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; } .ds-badge-today { border: 1px solid #5eead4; background: #f0fdfa; color: #0f766e; } .ds-badge-past { border: 1px solid #fda4af; background: #fff1f2; color: #be123c; }"
+    },
+    {
+      "name": "Task Row",
+      "kind": "card",
+      "refersTo": "task-row",
+      "description": "Canonical working surface for a single task.",
+      "html": "<article class=\"ds-task-row\"><button class=\"ds-check\" title=\"Complete Task\"></button><div class=\"ds-task-copy\"><div class=\"ds-task-title-line\"><h3>Write the next prompt</h3><span class=\"ds-badge ds-badge-today\">Due Today</span></div><p>Add useful context, constraints, links, reminders, or the next small step.</p><dl><div><dt>Due Date</dt><dd>2026-06-10</dd></div></dl></div><div class=\"ds-actions\"><button>Edit</button><button>Archive</button></div></article>",
+      "css": ".ds-task-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 12px; font: 400 16px/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; } .ds-check { width: 40px; height: 40px; flex-shrink: 0; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #94a3b8; cursor: pointer; } .ds-check:hover { border-color: #14b8a6; background: #f0fdfa; } .ds-check:focus-visible { outline: 2px solid #0d9488; outline-offset: 2px; } .ds-task-copy { min-width: 0; flex: 1; } .ds-task-title-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; } .ds-task-title-line h3 { margin: 0; color: #020617; font-size: 16px; font-weight: 600; } .ds-task-copy p { max-width: 65ch; margin: 4px 0 0; color: #64748b; line-height: 1.375; } .ds-task-copy dl { display: flex; flex-wrap: wrap; gap: 16px; margin: 8px 0 0; } .ds-task-copy dt { color: #64748b; font-size: 12px; font-weight: 700; } .ds-task-copy dd { margin: 2px 0 0; } .ds-actions { display: flex; gap: 6px; margin-left: 44px; } .ds-actions button { min-height: 40px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; padding: 0 10px; cursor: pointer; } .ds-badge { display: inline-flex; align-items: center; border-radius: 9999px; padding: 2px 8px; font-size: 12px; font-weight: 700; } .ds-badge-today { border: 1px solid #5eead4; background: #f0fdfa; color: #0f766e; }"
+    },
+    {
+      "name": "Navigation Group",
+      "kind": "nav",
+      "refersTo": "button-primary",
+      "description": "Small route switcher that reuses button states for active and inactive views.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Task views\"><a class=\"ds-nav-active\" href=\"#\">Main</a><a class=\"ds-nav-link\" href=\"#\">Archived</a></nav>",
+      "css": ".ds-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font: 600 16px/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; } .ds-nav a { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; border-radius: 6px; padding: 0 12px; text-decoration: none; transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out; } .ds-nav-active { border: 1px solid #0d9488; background: #0d9488; color: #ffffff; } .ds-nav-active:hover { background: #0f766e; border-color: #0f766e; } .ds-nav-link { border: 1px solid #cbd5e1; background: #ffffff; color: #0f172a; } .ds-nav-link:hover { background: #f1f5f9; } .ds-nav a:focus-visible { outline: 2px solid #0d9488; outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Prompt Bench",
+    "overview": "Todo by AI is a personal workbench: plain enough to trust, structured enough to keep momentum, and visibly shaped by iteration. The interface should feel like a useful surface beside the code editor, not a productivity command center. It keeps the task list in front and lets controls sit close to the work they affect.\n\nThe system is restrained by default. It uses familiar product UI patterns, compact but not crowded spacing, native-feeling typography, and one teal accent for action and state. The product can acknowledge its AI-built nature through clarity, editability, and calm defaults; it must not chase novelty UI.",
+    "keyCharacteristics": [
+      "Personal, practical, and legible.",
+      "Light canvas with white working surfaces.",
+      "One accent color reserved for action, selection, and positive state.",
+      "Standard controls that feel easy to extend through future prompts.",
+      "No dense power-user behavior unless the task itself genuinely requires it."
+    ],
+    "rules": [
+      {
+        "name": "The One Signal Rule",
+        "body": "Teal is reserved for primary action, current selection, focus, and positive state. Do not use it as ambient decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The White Work Surface Rule",
+        "body": "Task rows and forms stay on Paper Surface. The list must remain the most readable element on the page.",
+        "section": "colors"
+      },
+      {
+        "name": "The Native Tool Rule",
+        "body": "Use one system sans family everywhere. Do not introduce display fonts into labels, buttons, task rows, or data.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Until Interrupted Rule",
+        "body": "Surfaces are flat at rest. If a shadow appears, the user should understand that something has interrupted the main workflow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep task rows as the visual center of the screen.",
+      "Do use Prompt Teal only for primary action, current selection, focus, and positive task state.",
+      "Do keep buttons, filters, route links, and icon actions in the same 40px control vocabulary.",
+      "Do use skeleton rows for loading states, matching the task-row layout.",
+      "Do preserve visible focus outlines on every interactive control.",
+      "Do keep new features understandable through normal product patterns before adding custom behavior."
+    ],
+    "donts": [
+      "Don't make this feel like a dense power-user tool.",
+      "Don't add command-center dashboards, crowded control surfaces, buried settings, or excessive keyboard-centric affordances.",
+      "Don't turn tasks into todo-app maximalism where every task becomes metadata.",
+      "Don't use colored side-stripe borders on task rows, alerts, or badges.",
+      "Don't add gradient text, glassmorphism, decorative motion, or hero-metric patterns.",
+      "Don't introduce a sidebar, command palette, or multi-panel layout until the app has a real workflow that needs it."
+    ]
+  }
+}
