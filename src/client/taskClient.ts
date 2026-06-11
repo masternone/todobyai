@@ -1,16 +1,32 @@
 import { createServerFn } from "@tanstack/react-start";
-import type { EditableTaskFields, Task, TaskState } from "../domain/task";
+import type {
+  EditableTaskFields,
+  MainViewTasks,
+  Task,
+  TaskFilter,
+  TaskSort,
+  TaskState,
+} from "../domain/task";
 import {
   changeTaskStateForCurrentUser,
   createTaskForCurrentUser,
   deleteTaskForCurrentUser,
-  listTasksForCurrentUser,
+  listArchivedTasksForCurrentUser,
+  listMainViewTasksForCurrentUser,
   updateTaskForCurrentUser,
 } from "../server/taskFunctions";
 
-const listTasksServerFn = createServerFn({ method: "GET" }).handler(async () => {
-  return listTasksForCurrentUser();
-});
+const listMainViewTasksServerFn = createServerFn({ method: "GET" })
+  .validator((input: { filter: TaskFilter; sort: TaskSort; today: string }) => input)
+  .handler(async ({ data }) => {
+    return listMainViewTasksForCurrentUser(data);
+  });
+
+const listArchivedTasksServerFn = createServerFn({ method: "GET" })
+  .validator((input: { sort: TaskSort }) => input)
+  .handler(async ({ data }) => {
+    return listArchivedTasksForCurrentUser(data);
+  });
 
 const createTaskServerFn = createServerFn({ method: "POST" })
   .validator((input: { title: string; note?: string | null; dueDate?: string | null }) => input)
@@ -36,8 +52,16 @@ const deleteTaskServerFn = createServerFn({ method: "POST" })
     await deleteTaskForCurrentUser(data.taskId);
   });
 
-export function listTasks(): Promise<Task[]> {
-  return listTasksServerFn();
+export function listMainViewTasks(input: {
+  filter: TaskFilter;
+  sort: TaskSort;
+  today: string;
+}): Promise<MainViewTasks> {
+  return listMainViewTasksServerFn({ data: input });
+}
+
+export function listArchivedTasks(input: { sort: TaskSort }): Promise<Task[]> {
+  return listArchivedTasksServerFn({ data: input });
 }
 
 export function createTask(input: {

@@ -23,12 +23,11 @@ export type TaskRepository = {
   updateForUser(user: User, taskId: string, fields: EditableTaskFields): Promise<Task>;
   changeStateForUser(user: User, taskId: string, taskState: TaskState): Promise<Task>;
   deleteForUser(user: User, taskId: string): Promise<void>;
-  listForUser(user: User): Promise<Task[]>;
   listMainViewForUser(
     user: User,
     input: { filter: TaskFilter; sort: TaskSort; today: string },
   ): Promise<MainViewTasks>;
-  listArchivedForUser(user: User): Promise<Task[]>;
+  listArchivedForUser(user: User, sort: TaskSort): Promise<Task[]>;
 };
 
 export function createLibSqlTaskRepository(options?: {
@@ -101,10 +100,6 @@ class LibSqlTaskRepository implements TaskRepository {
     });
   }
 
-  async listForUser(user: User): Promise<Task[]> {
-    return this.listOwnedTasks(user, "1 = 1");
-  }
-
   async listMainViewForUser(
     user: User,
     input: { filter: TaskFilter; sort: TaskSort; today: string },
@@ -113,8 +108,11 @@ class LibSqlTaskRepository implements TaskRepository {
     return deriveMainViewTasks(rows, input);
   }
 
-  async listArchivedForUser(user: User): Promise<Task[]> {
-    return deriveArchivedViewTasks(await this.listOwnedTasks(user, "task_state = 'Archived'"));
+  async listArchivedForUser(user: User, sort: TaskSort): Promise<Task[]> {
+    return deriveArchivedViewTasks(
+      await this.listOwnedTasks(user, "task_state = 'Archived'"),
+      sort,
+    );
   }
 
   private async getOwnedTask(user: User, taskId: string): Promise<Task> {

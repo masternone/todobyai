@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Archive, Check, Edit3, Inbox, Plus, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
-  deriveArchivedViewTasks,
-  deriveMainViewTasks,
+  type MainViewTasks,
   isDueToday,
   isPastDue,
   type Task,
@@ -70,6 +69,9 @@ export function TaskSurface({ view }: { view: TaskSurfaceView }) {
         />
       ) : null}
       <TaskSurfaceControls workflow={workflow} />
+      {workflow.queryErrorMessage ? (
+        <p className="py-4 text-danger">{workflow.queryErrorMessage}</p>
+      ) : null}
       {workflow.sections.map((section) => (
         <TaskList
           emptyText={section.emptyText}
@@ -88,7 +90,7 @@ export function TaskSurface({ view }: { view: TaskSurfaceView }) {
 }
 
 function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
-  const { tasks, isLoadingTasks, addTask, updateTask, moveTask, deleteTask, today } =
+  const { addTask, deleteTask, listArchivedTasks, listMainViewTasks, moveTask, today, updateTask } =
     useTaskAppState();
   const [filter, setFilter] = useState<TaskFilter>("All");
   const [mainViewSort, setMainViewSort] = useState<TaskSort>("Newest");
@@ -96,15 +98,62 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
   const [showCompleted, setShowCompleted] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerDraft, setComposerDraft] = useState<TaskDraftFields>(emptyDraft);
+  const [queryState, setQueryState] = useState<{
+    archivedTasks: Task[];
+    errorMessage: string | null;
+    isLoading: boolean;
+    mainView: MainViewTasks;
+  }>({
+    archivedTasks: [],
+    errorMessage: null,
+    isLoading: true,
+    mainView: { activeTasks: [], completedTasks: [] },
+  });
 
-  const mainView = useMemo(
-    () => deriveMainViewTasks(tasks, { filter, sort: mainViewSort, today }),
-    [filter, mainViewSort, tasks, today],
-  );
-  const archivedTasks = useMemo(
-    () => deriveArchivedViewTasks(tasks, archivedViewSort),
-    [archivedViewSort, tasks],
-  );
+  async function loadCurrentTasks(options?: { cancelled?: () => boolean }) {
+    setQueryState((current) => ({ ...current, errorMessage: null, isLoading: true }));
+    try {
+      const next =
+        view === "Main View"
+          ? {
+              mainView: await listMainViewTasks({ filter, sort: mainViewSort, today }),
+              archivedTasks: [],
+            }
+          : {
+              archivedTasks: await listArchivedTasks({ sort: archivedViewSort }),
+              mainView: { activeTasks: [], completedTasks: [] },
+            };
+
+      if (!options?.cancelled?.()) {
+        setQueryState({
+          ...next,
+          errorMessage: null,
+          isLoading: false,
+        });
+      }
+    } catch (error) {
+      if (!options?.cancelled?.()) {
+        setQueryState((current) => ({
+          ...current,
+          errorMessage: error instanceof Error ? error.message : "Could not load Tasks.",
+          isLoading: false,
+        }));
+      }
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadCurrentTasks({ cancelled: () => cancelled });
+    return () => {
+      cancelled = true;
+    };
+  }, [archivedViewSort, filter, listArchivedTasks, listMainViewTasks, mainViewSort, today, view]);
+
+  async function runCommand(command: () => Promise<void>) {
+    await command();
+    await loadCurrentTasks();
+  }
 
   function resetComposer() {
     setComposerDraft(emptyDraft);
@@ -116,14 +165,14 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
       ? [
           {
             title: "Active",
-            tasks: mainView.activeTasks,
+            tasks: queryState.mainView.activeTasks,
             emptyText: "No active tasks match this filter.",
           },
           ...(showCompleted
             ? [
                 {
                   title: "Completed",
-                  tasks: mainView.completedTasks,
+                  tasks: queryState.mainView.completedTasks,
                   emptyText: "No completed tasks match this filter.",
                 },
               ]
@@ -132,17 +181,19 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
       : [
           {
             title: "Archived",
-            tasks: archivedTasks,
+            tasks: queryState.archivedTasks,
             emptyText: "No archived tasks yet.",
           },
         ];
 
   return {
     actions: {
-      addTask,
-      deleteTask,
-      moveTask,
-      updateTask,
+      addTask: (input: TaskDraftFields) => runCommand(() => addTask(input)),
+      deleteTask: (taskId: string) => runCommand(() => deleteTask(taskId)),
+      moveTask: (taskId: string, taskState: TaskState) =>
+        runCommand(() => moveTask(taskId, taskState)),
+      updateTask: (taskId: string, input: TaskDraftFields) =>
+        runCommand(() => updateTask(taskId, input)),
     },
     archivedView: {
       sort: archivedViewSort,
@@ -158,13 +209,14 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
       updateDraft: setComposerDraft,
     },
     filter,
-    isLoading: isLoadingTasks,
+    isLoading: queryState.isLoading,
     mainView: {
       setShowCompleted,
       setSort: setMainViewSort,
       showCompleted,
       sort: mainViewSort,
     },
+    queryErrorMessage: queryState.errorMessage,
     sections,
     setFilter,
     today,

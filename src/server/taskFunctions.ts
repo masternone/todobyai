@@ -28,11 +28,6 @@ export async function deleteTaskForCurrentUser(taskId: string) {
   await taskRepository.deleteForUser(currentUser, taskId);
 }
 
-export async function listTasksForCurrentUser() {
-  await taskRepository.initialize();
-  return taskRepository.listForUser(currentUser);
-}
-
 export async function listMainViewTasksForCurrentUser(input: {
   filter: TaskFilter;
   sort: TaskSort;
@@ -42,7 +37,7 @@ export async function listMainViewTasksForCurrentUser(input: {
   return taskRepository.listMainViewForUser(currentUser, input);
 }
 
-export async function listArchivedTasksForCurrentUser() {
+export async function listArchivedTasksForCurrentUser(input: { sort: TaskSort }) {
   await taskRepository.initialize();
-  return taskRepository.listArchivedForUser(currentUser);
+  return taskRepository.listArchivedForUser(currentUser, input.sort);
 }

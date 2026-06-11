@@ -1,12 +1,16 @@
 import React from "react";
-import type { Task, TaskState } from "./domain/task";
+import type { MainViewTasks, Task, TaskFilter, TaskSort, TaskState } from "./domain/task";
 
 export type TaskDraftFields = { title: string; note: string; dueDate: string };
 
 export type TaskAppContext = {
-  tasks: Task[];
-  isLoadingTasks: boolean;
   addTask: (input: TaskDraftFields) => Promise<void>;
+  listArchivedTasks: (input: { sort: TaskSort }) => Promise<Task[]>;
+  listMainViewTasks: (input: {
+    filter: TaskFilter;
+    sort: TaskSort;
+    today: string;
+  }) => Promise<MainViewTasks>;
   updateTask: (taskId: string, fields: TaskDraftFields) => Promise<void>;
   moveTask: (taskId: string, taskState: TaskState) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
