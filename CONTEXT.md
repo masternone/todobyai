@@ -37,7 +37,7 @@ A display condition for a Task whose Due Date is today. Due Today is not a Task 
 _Avoid_: Today
 
 **Task Filter**:
-A Main View choice that determines which Tasks are shown. The default Task Filter is All; other Task Filters include Past Due and Due Today.
+A Tasks choice that determines which Tasks are shown. The default Task Filter is All; other Task Filters include Past Due and Due Today.
 _Avoid_: View Mode
 
 **Task Sort**:
@@ -76,22 +76,30 @@ _Avoid_: Done
 A Task State meaning no further progress is expected and the User does not expect to see the Task in the main view.
 _Avoid_: Hidden
 
-**Main View**:
+**Tasks**:
 The User's primary Task surface. Active Tasks are shown prominently, and Completed Tasks can be shown or hidden there by the User in a Completed section.
-_Avoid_: Home, Dashboard
+_Avoid_: Main View, Home, Dashboard
 
 **Completed Section**:
-An optional Main View area for Completed Tasks. Main View Task Filters determine which Completed Tasks appear there, and Tasks in the Completed Section are always ordered by Recently Modified.
+An optional Tasks area for Completed Tasks. Task Filters determine which Completed Tasks appear there, and Tasks in the Completed Section are always ordered by Recently Modified.
 _Avoid_: Done List
 
-**Archived View**:
+**Archive**:
 A separate Task surface for Archived Tasks.
-_Avoid_: Hidden Tasks
+_Avoid_: Archived View, Archived Tasks, Hidden Tasks
+
+**Splash Page**:
+The public entry surface for people who have not signed in.
+_Avoid_: Landing Page, Home Page
 
 **Delete**:
 A confirmed, non-recoverable action that removes a Task from the User's accessible Tasks.
 _Avoid_: Remove
 
 **User**:
-A person who can create Tasks and owns the Tasks they create. By default, only the owning User can view, modify, or delete a Task.
-_Avoid_: Account
+A person who can create Tasks and owns the Tasks they create. By default, only the owning User can view, modify, or delete a Task; Users do not share Task lists.
+_Avoid_: Account, Workspace, Team
+
+**External User Link**:
+The stable identity that connects a User in Todo by AI to a managed user service.
+_Avoid_: Local User Profile
