@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { HeadContent, Navigate, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
-import { TaskAppShell } from "../taskApp";
 import "../styles.css";
 
 export const Route = createRootRoute({
@@ -18,9 +17,7 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <RootDocument>
-      <TaskAppShell>
-        <Outlet />
-      </TaskAppShell>
+      <Outlet />
     </RootDocument>
   );
 }

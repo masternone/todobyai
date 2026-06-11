@@ -9,12 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ArchiveRouteImport } from './routes/archive'
+import { Route as TaskRouteImport } from './routes/task'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TaskIndexRouteImport } from './routes/task.index'
+import { Route as TaskArchiveRouteImport } from './routes/task.archive'
 
-const ArchiveRoute = ArchiveRouteImport.update({
-  id: '/archive',
-  path: '/archive',
+const TaskRoute = TaskRouteImport.update({
+  id: '/task',
+  path: '/task',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -22,40 +24,55 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TaskIndexRoute = TaskIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TaskRoute,
+} as any)
+const TaskArchiveRoute = TaskArchiveRouteImport.update({
+  id: '/archive',
+  path: '/archive',
+  getParentRoute: () => TaskRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/archive': typeof ArchiveRoute
+  '/task': typeof TaskRouteWithChildren
+  '/task/archive': typeof TaskArchiveRoute
+  '/task/': typeof TaskIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/archive': typeof ArchiveRoute
+  '/task/archive': typeof TaskArchiveRoute
+  '/task': typeof TaskIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/archive': typeof ArchiveRoute
+  '/task': typeof TaskRouteWithChildren
+  '/task/archive': typeof TaskArchiveRoute
+  '/task/': typeof TaskIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/archive'
+  fullPaths: '/' | '/task' | '/task/archive' | '/task/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/archive'
-  id: '__root__' | '/' | '/archive'
+  to: '/' | '/task/archive' | '/task'
+  id: '__root__' | '/' | '/task' | '/task/archive' | '/task/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ArchiveRoute: typeof ArchiveRoute
+  TaskRoute: typeof TaskRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/archive': {
-      id: '/archive'
-      path: '/archive'
-      fullPath: '/archive'
-      preLoaderRoute: typeof ArchiveRouteImport
+    '/task': {
+      id: '/task'
+      path: '/task'
+      fullPath: '/task'
+      preLoaderRoute: typeof TaskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -65,12 +82,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/task/': {
+      id: '/task/'
+      path: '/'
+      fullPath: '/task/'
+      preLoaderRoute: typeof TaskIndexRouteImport
+      parentRoute: typeof TaskRoute
+    }
+    '/task/archive': {
+      id: '/task/archive'
+      path: '/archive'
+      fullPath: '/task/archive'
+      preLoaderRoute: typeof TaskArchiveRouteImport
+      parentRoute: typeof TaskRoute
+    }
   }
 }
 
+interface TaskRouteChildren {
+  TaskArchiveRoute: typeof TaskArchiveRoute
+  TaskIndexRoute: typeof TaskIndexRoute
+}
+
+const TaskRouteChildren: TaskRouteChildren = {
+  TaskArchiveRoute: TaskArchiveRoute,
+  TaskIndexRoute: TaskIndexRoute,
+}
+
+const TaskRouteWithChildren = TaskRoute._addFileChildren(TaskRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ArchiveRoute: ArchiveRoute,
+  TaskRoute: TaskRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

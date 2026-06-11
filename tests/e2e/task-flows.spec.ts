@@ -9,14 +9,21 @@ type TaskFixture = {
   dueDateKind: "none" | "yesterday" | "today" | "tomorrow";
 };
 
+test("shows a public Splash Page at the root route", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByRole("heading", { name: "Todo by AI" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add Task" })).toBeHidden();
+});
+
 test("creates Tasks across required and optional fields, filters them, changes Task State, and deletes them", async ({
   page,
 }) => {
   const dates = await relativeDates(page);
   const tasks = buildTaskMatrix(dates);
 
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Main View" })).toBeVisible();
+  await page.goto("/task");
+  await expect(page.getByRole("heading", { name: "Tasks" })).toBeVisible();
   await expect(page.getByLabel("Loading Tasks")).toBeHidden();
 
   await verifyTitleRequiredNotification(page);
@@ -45,10 +52,12 @@ test("creates Tasks across required and optional fields, filters them, changes T
   await page.getByRole("button", { name: "All" }).click();
   await archiveTask(page, finalTaskTitles[0]);
   await expect(taskRow(page, finalTaskTitles[0])).toBeHidden();
-  await page.getByRole("link", { name: "Archived" }).click();
+  await page.getByRole("link", { name: "Archive" }).click();
+  await expect(page).toHaveURL(/\/task\/archive$/);
   await expect(taskRow(page, finalTaskTitles[0])).toBeVisible();
   await restoreTask(page, finalTaskTitles[0], { leavesCurrentView: true });
-  await page.getByRole("link", { name: "Main" }).click();
+  await page.getByRole("link", { name: "Tasks" }).click();
+  await expect(page).toHaveURL(/\/task$/);
   await expect(taskRow(page, finalTaskTitles[0])).toBeVisible();
 
   await completeTask(page, tasks[1].title);
@@ -60,10 +69,12 @@ test("creates Tasks across required and optional fields, filters them, changes T
   await archiveTask(page, tasks[1].title);
   await expect(taskList(page, "Completed").getByText(tasks[1].title)).toBeHidden();
 
-  await page.getByRole("link", { name: "Archived" }).click();
+  await page.getByRole("link", { name: "Archive" }).click();
+  await expect(page).toHaveURL(/\/task\/archive$/);
   await expect(taskRow(page, tasks[1].title)).toBeVisible();
   await restoreTask(page, tasks[1].title, { leavesCurrentView: true });
-  await page.getByRole("link", { name: "Main" }).click();
+  await page.getByRole("link", { name: "Tasks" }).click();
+  await expect(page).toHaveURL(/\/task$/);
   await page.getByLabel("Show completed").check();
   await restoreTask(page, tasks[2].title, { leavesCurrentView: false });
   await expect(taskList(page, "Active").getByText(tasks[1].title)).toBeVisible();
@@ -221,7 +232,7 @@ async function restoreTask(page: Page, title: string, options: { leavesCurrentVi
 
 async function deleteCreatedTasks(page: Page, taskTitles: string[]) {
   page.on("dialog", (dialog) => dialog.accept());
-  for (const view of ["Main", "Archived"]) {
+  for (const view of ["Tasks", "Archive"]) {
     await page.getByRole("link", { name: view }).click();
     for (const title of taskTitles) {
       const row = taskRow(page, title);

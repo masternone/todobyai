@@ -1,7 +1,6 @@
 import * as taskClient from "./client/taskClient";
 import type { TaskState } from "./domain/task";
 import { TaskAppStateContext, type TaskAppContext, type TaskDraftFields } from "./taskAppState";
-import { TaskSurface } from "./taskSurface";
 import "./styles.css";
 
 export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -41,12 +40,4 @@ export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode 
       <main className="mx-auto max-w-6xl p-4 md:p-8">{children}</main>
     </TaskAppStateContext.Provider>
   );
-}
-
-export function MainViewRoute() {
-  return <TaskSurface view="Main View" />;
-}
-
-export function ArchiveViewRoute() {
-  return <TaskSurface view="Archived View" />;
 }

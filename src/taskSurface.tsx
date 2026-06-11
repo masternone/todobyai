@@ -12,7 +12,7 @@ import {
 } from "./domain/task";
 import { type TaskDraftFields, useTaskAppState } from "./taskAppState";
 
-type TaskSurfaceView = "Main View" | "Archived View";
+type TaskSurfaceView = "Tasks" | "Archive";
 type TaskListSection = { title: string; tasks: Task[]; emptyText: string };
 
 const emptyDraft: TaskDraftFields = { title: "", note: "", dueDate: "" };
@@ -114,7 +114,7 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
     setQueryState((current) => ({ ...current, errorMessage: null, isLoading: true }));
     try {
       const next =
-        view === "Main View"
+        view === "Tasks"
           ? {
               mainView: await listMainViewTasks({ filter, sort: mainViewSort, today }),
               archivedTasks: [],
@@ -161,7 +161,7 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
   }
 
   const sections: TaskListSection[] =
-    view === "Main View"
+    view === "Tasks"
       ? [
           {
             title: "Active",
@@ -236,13 +236,13 @@ function TaskSurfaceHeader({ title }: { title: string }) {
         </h1>
       </div>
       <nav className="flex flex-wrap items-center gap-2" aria-label="Task views">
-        <Link className={buttonClass(pathname === "/")} to="/">
+        <Link className={buttonClass(pathname === "/task")} to="/task">
           <Inbox size={16} />
-          Main
+          Tasks
         </Link>
-        <Link className={buttonClass(pathname === "/archive")} to="/archive">
+        <Link className={buttonClass(pathname === "/task/archive")} to="/task/archive">
           <Archive size={16} />
-          Archived
+          Archive
         </Link>
       </nav>
     </header>
@@ -254,11 +254,11 @@ function TaskSurfaceControls({
 }: {
   workflow: ReturnType<typeof useTaskSurfaceWorkflow>;
 }) {
-  if (workflow.view === "Archived View") {
+  if (workflow.view === "Archive") {
     return (
       <section
         className="my-4 mb-7 grid gap-3 md:flex md:items-end md:justify-end"
-        aria-label="Archived View controls"
+        aria-label="Archive controls"
       >
         <TaskSortSelect
           value={workflow.archivedView.sort}
@@ -269,7 +269,7 @@ function TaskSurfaceControls({
   }
 
   return (
-    <section className="task-controls" aria-label="Main View controls">
+    <section className="task-controls" aria-label="Tasks controls">
       <button
         className={buttonClass(true)}
         disabled={workflow.isLoading}

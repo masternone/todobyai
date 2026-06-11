@@ -12,14 +12,14 @@ Move the current Task experience off the public root route. The root route becom
 
 ## Acceptance criteria
 
-- [ ] Visiting `/` shows a public Splash Page instead of the Task management UI.
-- [ ] The existing primary Task surface is available at `/task` and uses the visible title Tasks.
-- [ ] The existing archived Task surface is available at `/task/archive` and uses the visible title Archive.
-- [ ] The Tasks surface links to Archive.
-- [ ] The Archive surface links back to Tasks.
-- [ ] The Task app shell wraps only the Task surfaces, not the Splash Page.
-- [ ] Existing Task behavior still works at the new routes before Clerk route protection is added.
-- [ ] Route/UI tests or equivalent coverage verify the new route labels and navigation.
+- [x] Visiting `/` shows a public Splash Page instead of the Task management UI.
+- [x] The existing primary Task surface is available at `/task` and uses the visible title Tasks.
+- [x] The existing archived Task surface is available at `/task/archive` and uses the visible title Archive.
+- [x] The Tasks surface links to Archive.
+- [x] The Archive surface links back to Tasks.
+- [x] The Task app shell wraps only the Task surfaces, not the Splash Page.
+- [x] Existing Task behavior still works at the new routes before Clerk route protection is added.
+- [x] Route/UI tests or equivalent coverage verify the new route labels and navigation.
 
 ## Blocked by
 
