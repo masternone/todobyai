@@ -1,0 +1,3 @@
+# Defer TanStack Query until Task server state has multiple readers
+
+We will keep Task loading and mutations in the current `TaskAppShell` adapter instead of introducing TanStack Query now. The app currently has one shared Task collection, simple loading/error handling, and behavior-preserving local updates, so query keys, invalidation rules, mutation cache updates, and retry/refetch policy would add more interface than implementation. Revisit this when Task server state has multiple independent readers, per-row mutation pending/error states, background refetch, pagination or search, User switching, or cache invalidation complexity.
