@@ -333,9 +333,10 @@ function TaskComposer({
   }
 
   return (
-    <form className="grid gap-3" onSubmit={submit}>
+    <form className="task-form" onSubmit={submit}>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1.5">
+          <span className="text-xs font-bold text-ink-muted">Title</span>
           <input
             aria-describedby={showTitleRequired ? titleErrorId : undefined}
             aria-invalid={showTitleRequired}
@@ -358,6 +359,7 @@ function TaskComposer({
           </span>
         </label>
         <label className="grid gap-1.5">
+          <span className="text-xs font-bold text-ink-muted">Due Date</span>
           <input
             aria-label="Due Date"
             className={fieldClass}
@@ -368,13 +370,16 @@ function TaskComposer({
           <span className="min-h-5" aria-hidden="true" />
         </label>
       </div>
-      <textarea
-        aria-label="Note"
-        className={cx(fieldClass, "min-h-32 resize-y py-2")}
-        placeholder="Add useful context, constraints, links, reminders, or the next small step for this Task."
-        value={draft.note}
-        onChange={(event) => onChange({ ...draft, note: event.target.value })}
-      />
+      <label className="grid gap-1.5">
+        <span className="text-xs font-bold text-ink-muted">Note</span>
+        <textarea
+          aria-label="Note"
+          className={cx(fieldClass, "min-h-32 resize-y py-2")}
+          placeholder="Add useful context, constraints, links, reminders, or the next small step for this Task."
+          value={draft.note}
+          onChange={(event) => onChange({ ...draft, note: event.target.value })}
+        />
+      </label>
       <div className="flex flex-wrap justify-end gap-2">
         <button className={buttonClass(false)} onClick={onCancel} type="button">
           <X size={16} />
@@ -592,19 +597,26 @@ function TaskRow({
   const [title, setTitle] = useState(task.title);
   const [note, setNote] = useState(task.note ?? "");
   const [dueDate, setDueDate] = useState(task.dueDate ?? "");
+  const [saving, setSaving] = useState(false);
   const [showTitleRequired, setShowTitleRequired] = useState(false);
   const pastDue = isPastDue(task, today);
   const dueToday = isDueToday(task, today);
   const titleErrorId = `task-${task.id}-title-error`;
   const titleMissing = !title.trim();
 
-  async function save() {
-    if (titleMissing) {
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    if (titleMissing || saving) {
       setShowTitleRequired(true);
       return;
     }
-    await onUpdate(task.id, { title, note, dueDate });
-    setEditing(false);
+    setSaving(true);
+    try {
+      await onUpdate(task.id, { title, note, dueDate });
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function cancelEdit() {
@@ -630,44 +642,66 @@ function TaskRow({
       >
         {task.taskState === "Active" ? null : <Check size={22} strokeWidth={2.5} />}
       </button>
-      <div className="task-row__content">
+      <div className={cx("task-row__content", editing && "task-row__content--editing")}>
         {editing ? (
-          <div className="task-row__edit-fields">
+          <form className="task-form" onSubmit={save}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1.5">
+                <span className="text-xs font-bold text-ink-muted">Title</span>
+                <input
+                  aria-describedby={showTitleRequired ? titleErrorId : undefined}
+                  aria-invalid={showTitleRequired}
+                  aria-label="Title"
+                  className={fieldClass}
+                  placeholder="Task Title (required)"
+                  value={title}
+                  onBlur={() => setShowTitleRequired(titleMissing)}
+                  onChange={(event) => {
+                    setShowTitleRequired(false);
+                    setTitle(event.target.value);
+                  }}
+                />
+                <span
+                  className="min-h-5 text-sm font-semibold text-danger"
+                  id={titleErrorId}
+                  role={showTitleRequired ? "alert" : undefined}
+                >
+                  {showTitleRequired ? "Title is required." : null}
+                </span>
+              </label>
+              <label className="grid gap-1.5">
+                <span className="text-xs font-bold text-ink-muted">Due Date</span>
+                <input
+                  className={fieldClass}
+                  aria-label="Due Date"
+                  type="date"
+                  value={dueDate}
+                  onChange={(event) => setDueDate(event.target.value)}
+                />
+                <span className="min-h-5" aria-hidden="true" />
+              </label>
+            </div>
             <label className="grid gap-1.5">
-              <input
-                aria-describedby={showTitleRequired ? titleErrorId : undefined}
-                aria-invalid={showTitleRequired}
-                aria-label="Title"
-                className={fieldClass}
-                value={title}
-                onBlur={() => setShowTitleRequired(titleMissing)}
-                onChange={(event) => {
-                  setShowTitleRequired(false);
-                  setTitle(event.target.value);
-                }}
+              <span className="text-xs font-bold text-ink-muted">Note</span>
+              <textarea
+                className={cx(fieldClass, "min-h-24 resize-y py-2")}
+                aria-label="Note"
+                placeholder="Add useful context, constraints, links, reminders, or the next small step for this Task."
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
               />
-              <span
-                className="min-h-5 text-sm font-semibold text-danger"
-                id={titleErrorId}
-                role={showTitleRequired ? "alert" : undefined}
-              >
-                {showTitleRequired ? "Title is required." : null}
-              </span>
             </label>
-            <input
-              className={fieldClass}
-              aria-label="Note"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-            />
-            <input
-              className={fieldClass}
-              aria-label="Due Date"
-              type="date"
-              value={dueDate}
-              onChange={(event) => setDueDate(event.target.value)}
-            />
-          </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button className={buttonClass(false)} onClick={cancelEdit} type="button">
+                <X size={16} />
+                Cancel
+              </button>
+              <button className={buttonClass(true)} disabled={saving} type="submit">
+                <Save size={16} />
+                Save
+              </button>
+            </div>
+          </form>
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2">
@@ -699,27 +733,8 @@ function TaskRow({
           </>
         )}
       </div>
-      <div className="task-row__actions">
-        {editing ? (
-          <>
-            <button
-              aria-label="Save Task"
-              className={iconButton}
-              onClick={() => void save()}
-              title="Save Task"
-            >
-              <Save size={16} />
-            </button>
-            <button
-              aria-label="Cancel Edit"
-              className={iconButton}
-              onClick={cancelEdit}
-              title="Cancel Edit"
-            >
-              <X size={16} />
-            </button>
-          </>
-        ) : (
+      <div className={cx("task-row__actions", editing && "task-row__actions--hidden")}>
+        {editing ? null : (
           <>
             <button
               aria-label="Edit Task"

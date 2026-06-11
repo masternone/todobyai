@@ -26,11 +26,9 @@ test("creates Tasks across required and optional fields, filters them, changes T
     await expect(taskRow(page, task.title)).toBeVisible();
   }
 
-  await expectTaskTitles(
-    page,
-    "Active",
-    tasks.map((task) => task.title),
-  );
+  const finalTaskTitles = await verifyEditBehaviors(page, tasks, dates.tomorrow);
+
+  await expectTaskTitles(page, "Active", finalTaskTitles);
   await expectTaskTitles(
     page,
     "Active",
@@ -45,13 +43,13 @@ test("creates Tasks across required and optional fields, filters them, changes T
   );
 
   await page.getByRole("button", { name: "All" }).click();
-  await archiveTask(page, tasks[0].title);
-  await expect(taskRow(page, tasks[0].title)).toBeHidden();
+  await archiveTask(page, finalTaskTitles[0]);
+  await expect(taskRow(page, finalTaskTitles[0])).toBeHidden();
   await page.getByRole("link", { name: "Archived" }).click();
-  await expect(taskRow(page, tasks[0].title)).toBeVisible();
-  await restoreTask(page, tasks[0].title, { leavesCurrentView: true });
+  await expect(taskRow(page, finalTaskTitles[0])).toBeVisible();
+  await restoreTask(page, finalTaskTitles[0], { leavesCurrentView: true });
   await page.getByRole("link", { name: "Main" }).click();
-  await expect(taskRow(page, tasks[0].title)).toBeVisible();
+  await expect(taskRow(page, finalTaskTitles[0])).toBeVisible();
 
   await completeTask(page, tasks[1].title);
   await completeTask(page, tasks[2].title);
@@ -71,7 +69,7 @@ test("creates Tasks across required and optional fields, filters them, changes T
   await expect(taskList(page, "Active").getByText(tasks[1].title)).toBeVisible();
   await expect(taskList(page, "Active").getByText(tasks[2].title)).toBeVisible();
 
-  await deleteCreatedTasks(page, tasks);
+  await deleteCreatedTasks(page, finalTaskTitles);
 });
 
 function buildTaskMatrix(dates: {
@@ -139,6 +137,52 @@ async function createTask(page: Page, task: TaskFixture) {
   await expect(dialog).toBeHidden();
 }
 
+async function verifyEditBehaviors(page: Page, tasks: TaskFixture[], dueDate: string) {
+  const task = tasks[0];
+  const editedTask = {
+    title: `${task.title} edited`,
+    note: "Edited note through the inline Task form",
+    dueDate,
+  };
+
+  await page.getByRole("button", { name: "All" }).click();
+  const row = taskRow(page, task.title);
+  await row.getByRole("button", { name: "Edit Task" }).click();
+  const editor = taskEditor(page);
+
+  await expect(editor.getByPlaceholder("Task Title (required)")).toBeVisible();
+  await editor.getByLabel("Title").fill("");
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(editor.getByText("Title is required.")).toBeVisible();
+  await expect(editor.getByLabel("Title")).toHaveAttribute("aria-invalid", "true");
+
+  await editor.getByLabel("Title").fill("Temporary title that should be cancelled");
+  await editor.getByLabel("Note").fill("Temporary note that should be cancelled");
+  await editor.getByLabel("Due Date").fill(dueDate);
+  await editor.getByRole("button", { name: "Cancel" }).click();
+  await expect(taskRow(page, task.title)).toBeVisible();
+  await expect(page.getByText("Temporary title that should be cancelled")).toBeHidden();
+
+  await row.getByRole("button", { name: "Edit Task" }).click();
+  await taskEditor(page).getByLabel("Title").fill(editedTask.title);
+  await taskEditor(page).getByLabel("Note").fill(editedTask.note);
+  await taskEditor(page).getByLabel("Due Date").fill(editedTask.dueDate);
+  await taskEditor(page).getByRole("button", { name: "Save" }).click();
+  await expect(taskRow(page, editedTask.title)).toBeVisible();
+  await expect(taskRow(page, editedTask.title).getByText(editedTask.note)).toBeVisible();
+  await expect(taskRow(page, editedTask.title).getByText(editedTask.dueDate)).toBeVisible();
+
+  const editedRow = taskRow(page, editedTask.title);
+  await editedRow.getByRole("button", { name: "Edit Task" }).click();
+  await taskEditor(page).getByLabel("Note").fill("");
+  await taskEditor(page).getByLabel("Due Date").fill("");
+  await taskEditor(page).getByRole("button", { name: "Save" }).click();
+  await expect(taskRow(page, editedTask.title).getByText(editedTask.note)).toBeHidden();
+  await expect(taskRow(page, editedTask.title).getByText(editedTask.dueDate)).toBeHidden();
+
+  return tasks.map((fixture) => (fixture.title === task.title ? editedTask.title : fixture.title));
+}
+
 async function expectTaskTitles(
   page: Page,
   listName: string,
@@ -175,12 +219,12 @@ async function restoreTask(page: Page, title: string, options: { leavesCurrentVi
   }
 }
 
-async function deleteCreatedTasks(page: Page, tasks: TaskFixture[]) {
+async function deleteCreatedTasks(page: Page, taskTitles: string[]) {
   page.on("dialog", (dialog) => dialog.accept());
   for (const view of ["Main", "Archived"]) {
     await page.getByRole("link", { name: view }).click();
-    for (const task of tasks) {
-      const row = taskRow(page, task.title);
+    for (const title of taskTitles) {
+      const row = taskRow(page, title);
       if (await row.isVisible()) {
         await row.getByRole("button", { name: "Delete Task" }).click();
         await expect(row).toBeHidden();
@@ -195,4 +239,8 @@ function taskList(page: Page, name: string): Locator {
 
 function taskRow(page: Page, title: string): Locator {
   return page.locator("article").filter({ hasText: title });
+}
+
+function taskEditor(page: Page): Locator {
+  return page.locator("article").filter({ has: page.getByRole("button", { name: "Save" }) });
 }
