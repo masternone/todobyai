@@ -1,4 +1,5 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
+import { RequireSignedIn } from "../auth";
 import { TaskAppShell } from "../taskApp";
 
 export const Route = createFileRoute("/task")({
@@ -7,8 +8,10 @@ export const Route = createFileRoute("/task")({
 
 function TaskRouteLayout() {
   return (
-    <TaskAppShell>
-      <Outlet />
-    </TaskAppShell>
+    <RequireSignedIn>
+      <TaskAppShell>
+        <Outlet />
+      </TaskAppShell>
+    </RequireSignedIn>
   );
 }

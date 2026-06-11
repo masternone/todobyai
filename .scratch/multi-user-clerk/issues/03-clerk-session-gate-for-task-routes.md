@@ -1,6 +1,6 @@
 # Clerk Session Gate for Task Routes
 
-Status: ready-for-agent
+Status: ready-for-human
 
 ## Parent
 
@@ -12,16 +12,16 @@ Wire Clerk into the app routing experience. Signed-out visitors can sign in or s
 
 ## Acceptance criteria
 
-- [ ] Clerk is configured through environment variables, including the browser publishable key and server secret key.
-- [ ] The Splash Page exposes sign-in and sign-up actions.
-- [ ] A signed-in User visiting `/` is redirected to `/task`.
-- [ ] A signed-out visitor attempting `/task` is required to sign in.
-- [ ] A signed-out visitor attempting `/task/archive` is required to sign in.
-- [ ] A protected `/task` deep link lands on `/task` after sign-in.
-- [ ] A protected `/task/archive` deep link lands on `/task/archive` after sign-in.
-- [ ] Sign-out returns the User to `/`.
-- [ ] The app behaves clearly when Clerk environment variables are missing in local development.
-- [ ] Route/UI tests or equivalent coverage verify the signed-in, signed-out, and deep-link behaviors without relying on real Clerk network calls in automated tests.
+- [x] Clerk is configured through environment variables, including the browser publishable key and server secret key.
+- [x] The Splash Page exposes sign-in and sign-up actions.
+- [x] A signed-in User visiting `/` is redirected to `/task`.
+- [x] A signed-out visitor attempting `/task` is required to sign in.
+- [x] A signed-out visitor attempting `/task/archive` is required to sign in.
+- [x] A protected `/task` deep link lands on `/task` after sign-in.
+- [x] A protected `/task/archive` deep link lands on `/task/archive` after sign-in.
+- [x] Sign-out returns the User to `/`.
+- [x] The app behaves clearly when Clerk environment variables are missing in local development.
+- [x] Route/UI tests or equivalent coverage verify the signed-in, signed-out, and deep-link behaviors without relying on real Clerk network calls in automated tests.
 
 ## Blocked by
 

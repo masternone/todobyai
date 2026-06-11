@@ -13,12 +13,49 @@ test("shows a public Splash Page at the root route", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "Todo by AI" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign up" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Add Task" })).toBeHidden();
+});
+
+test("requires sign-in for Tasks and preserves the protected destination", async ({ page }) => {
+  await page.goto("/task");
+
+  await expect(page.getByRole("heading", { name: "Sign in to Todo by AI" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await expect(page).toHaveURL(/\/task$/);
+  await expect(page.getByRole("heading", { name: "Tasks" })).toBeVisible();
+});
+
+test("redirects signed-in Users from Splash and signs out to the Splash Page", async ({ page }) => {
+  await signInForTest(page);
+
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/task$/);
+  await expect(page.getByRole("heading", { name: "Tasks" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { name: "Todo by AI" })).toBeVisible();
+});
+
+test("requires sign-in for Archive and preserves the protected destination", async ({ page }) => {
+  await page.goto("/task/archive");
+
+  await expect(page.getByRole("heading", { name: "Sign in to Todo by AI" })).toBeVisible();
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await expect(page).toHaveURL(/\/task\/archive$/);
+  await expect(page.getByRole("heading", { exact: true, name: "Archive" })).toBeVisible();
 });
 
 test("creates Tasks across required and optional fields, filters them, changes Task State, and deletes them", async ({
   page,
 }) => {
+  await signInForTest(page);
   const dates = await relativeDates(page);
   const tasks = buildTaskMatrix(dates);
 
@@ -254,4 +291,10 @@ function taskRow(page: Page, title: string): Locator {
 
 function taskEditor(page: Page): Locator {
   return page.locator("article").filter({ has: page.getByRole("button", { name: "Save" }) });
+}
+
+async function signInForTest(page: Page) {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("todo-by-ai-test-user", "signed-in");
+  });
 }

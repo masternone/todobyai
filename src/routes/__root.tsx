@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { HeadContent, Navigate, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import { AuthProvider } from "../auth";
 import "../styles.css";
 
 export const Route = createRootRoute({
@@ -17,7 +18,9 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <RootDocument>
-      <Outlet />
+      <AuthProvider>
+        <Outlet />
+      </AuthProvider>
     </RootDocument>
   );
 }

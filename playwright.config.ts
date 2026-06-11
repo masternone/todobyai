@@ -10,7 +10,8 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "TODO_BY_AI_DB_URL=file:todo-by-ai-e2e.db npm run dev -- --port 4173",
+    command:
+      "TODO_BY_AI_DB_URL=file:todo-by-ai-e2e.db VITE_TODO_BY_AI_AUTH_MODE=test npm run dev -- --port 4173",
     url: "http://127.0.0.1:4173",
     reuseExistingServer: !process.env.CI,
   },

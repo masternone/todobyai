@@ -1,4 +1,5 @@
 import * as taskClient from "./client/taskClient";
+import { AuthActionButton } from "./auth";
 import type { TaskState } from "./domain/task";
 import { TaskAppStateContext, type TaskAppContext, type TaskDraftFields } from "./taskAppState";
 import "./styles.css";
@@ -37,7 +38,17 @@ export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode 
 
   return (
     <TaskAppStateContext.Provider value={context}>
-      <main className="mx-auto max-w-6xl p-4 md:p-8">{children}</main>
+      <main className="mx-auto max-w-6xl p-4 md:p-8">
+        <div className="mb-4 flex justify-end">
+          <AuthActionButton
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-rule bg-surface px-4 text-sm font-semibold text-ink"
+            intent="sign-out"
+          >
+            Sign out
+          </AuthActionButton>
+        </div>
+        {children}
+      </main>
     </TaskAppStateContext.Provider>
   );
 }
