@@ -1,5 +1,6 @@
-import { type EditableTaskFields, type Task, type TaskState, type User } from "../domain/task";
-import { createLibSqlTaskRepository } from "./taskRepository";
+import { type EditableTaskFields, type Task, type TaskState } from "../domain/task";
+import { getCurrentUserFromSession, type CurrentUserProvider } from "./currentUser";
+import { createLibSqlTaskRepository, type TaskRepository } from "./taskRepository";
 
 export type TaskCommand =
   | {
@@ -10,24 +11,36 @@ export type TaskCommand =
   | { type: "Change Task State"; taskId: string; taskState: TaskState }
   | { type: "Delete Task"; taskId: string };
 
-const currentUser: User = { id: "local-user" };
-const taskRepository = createLibSqlTaskRepository();
+export function createTaskCommandHandlers(options?: {
+  getCurrentUser?: CurrentUserProvider;
+  taskRepository?: TaskRepository;
+}) {
+  const getCurrentUser = options?.getCurrentUser ?? getCurrentUserFromSession;
+  const taskRepository = options?.taskRepository ?? createLibSqlTaskRepository();
 
-export async function runTaskCommandForCurrentUser(command: TaskCommand): Promise<Task | null> {
-  await taskRepository.initialize();
+  return {
+    async runTaskCommandForCurrentUser(command: TaskCommand): Promise<Task | null> {
+      const currentUser = await getCurrentUser();
+      await taskRepository.initialize();
 
-  if (command.type === "Create Task") {
-    return taskRepository.createForUser(currentUser, command.input);
-  }
+      if (command.type === "Create Task") {
+        return taskRepository.createForUser(currentUser, command.input);
+      }
 
-  if (command.type === "Update Task") {
-    return taskRepository.updateForUser(currentUser, command.taskId, command.fields);
-  }
+      if (command.type === "Update Task") {
+        return taskRepository.updateForUser(currentUser, command.taskId, command.fields);
+      }
 
-  if (command.type === "Change Task State") {
-    return taskRepository.changeStateForUser(currentUser, command.taskId, command.taskState);
-  }
+      if (command.type === "Change Task State") {
+        return taskRepository.changeStateForUser(currentUser, command.taskId, command.taskState);
+      }
 
-  await taskRepository.deleteForUser(currentUser, command.taskId);
-  return null;
+      await taskRepository.deleteForUser(currentUser, command.taskId);
+      return null;
+    },
+  };
 }
+
+const defaultHandlers = createTaskCommandHandlers();
+
+export const { runTaskCommandForCurrentUser } = defaultHandlers;

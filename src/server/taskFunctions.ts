@@ -1,19 +1,34 @@
 import { createLibSqlTaskRepository } from "./taskRepository";
-import type { TaskFilter, TaskSort, User } from "../domain/task";
+import type { TaskFilter, TaskSort } from "../domain/task";
+import { getCurrentUserFromSession, type CurrentUserProvider } from "./currentUser";
+import type { TaskRepository } from "./taskRepository";
 
-const currentUser: User = { id: "local-user" };
-const taskRepository = createLibSqlTaskRepository();
-
-export async function listMainViewTasksForCurrentUser(input: {
-  filter: TaskFilter;
-  sort: TaskSort;
-  today: string;
+export function createTaskFunctionHandlers(options?: {
+  getCurrentUser?: CurrentUserProvider;
+  taskRepository?: TaskRepository;
 }) {
-  await taskRepository.initialize();
-  return taskRepository.listMainViewForUser(currentUser, input);
+  const getCurrentUser = options?.getCurrentUser ?? getCurrentUserFromSession;
+  const taskRepository = options?.taskRepository ?? createLibSqlTaskRepository();
+
+  return {
+    async listMainViewTasksForCurrentUser(input: {
+      filter: TaskFilter;
+      sort: TaskSort;
+      today: string;
+    }) {
+      const currentUser = await getCurrentUser();
+      await taskRepository.initialize();
+      return taskRepository.listMainViewForUser(currentUser, input);
+    },
+
+    async listArchivedTasksForCurrentUser(input: { sort: TaskSort }) {
+      const currentUser = await getCurrentUser();
+      await taskRepository.initialize();
+      return taskRepository.listArchivedForUser(currentUser, input.sort);
+    },
+  };
 }
 
-export async function listArchivedTasksForCurrentUser(input: { sort: TaskSort }) {
-  await taskRepository.initialize();
-  return taskRepository.listArchivedForUser(currentUser, input.sort);
-}
+const defaultHandlers = createTaskFunctionHandlers();
+
+export const { listArchivedTasksForCurrentUser, listMainViewTasksForCurrentUser } = defaultHandlers;
