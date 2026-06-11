@@ -7,3 +7,4 @@ todo-by-ai-e2e.db
 *.db
 test-results/
 playwright-report/
+/.env.local

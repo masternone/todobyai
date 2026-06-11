@@ -12,12 +12,12 @@ Create the Clerk application needed for Todo by AI multi User support and provid
 
 ## Acceptance criteria
 
-- [ ] A Clerk application exists for Todo by AI local development.
-- [ ] Clerk is configured to allow local development redirects for `/`, `/task`, and `/task/archive`.
-- [ ] `VITE_CLERK_PUBLISHABLE_KEY` is available to the local app environment.
-- [ ] `CLERK_SECRET_KEY` is available only to the server-side local app environment.
-- [ ] No Clerk secret key is committed to the repository.
-- [ ] The implementer has enough information to run and verify Clerk sign-in/sign-up locally.
+- [x] A Clerk application exists for Todo by AI local development.
+- [x] Clerk is configured to allow local development redirects for `/`, `/task`, and `/task/archive`.
+- [x] `VITE_CLERK_PUBLISHABLE_KEY` is available to the local app environment.
+- [x] `CLERK_SECRET_KEY` is available only to the server-side local app environment.
+- [x] No Clerk secret key is committed to the repository.
+- [x] The implementer has enough information to run and verify Clerk sign-in/sign-up locally.
 
 ## Blocked by
 
