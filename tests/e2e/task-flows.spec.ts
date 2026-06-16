@@ -317,13 +317,18 @@ async function restoreTask(page: Page, title: string, options: { leavesCurrentVi
 }
 
 async function deleteCreatedTasks(page: Page, taskTitles: string[]) {
-  page.on("dialog", (dialog) => dialog.accept());
   for (const view of ["Tasks", "Archive"]) {
     await page.getByRole("link", { name: view }).click();
     for (const title of taskTitles) {
       const row = taskRow(page, title);
       if (await row.isVisible()) {
         await row.getByRole("button", { name: "Delete Task" }).click();
+        await page
+          .getByRole("dialog", { name: /Delete/ })
+          .getByRole("button", {
+            name: "Delete Task",
+          })
+          .click();
         await expect(row).toBeHidden();
       }
     }

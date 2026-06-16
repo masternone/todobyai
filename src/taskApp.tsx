@@ -20,10 +20,7 @@ export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode 
   }
 
   async function deleteTask(taskId: string) {
-    const confirmed = window.confirm("Delete this task permanently? This cannot be undone.");
-    if (confirmed) {
-      await taskClient.deleteTask(taskId);
-    }
+    await taskClient.deleteTask(taskId);
   }
 
   const context: TaskAppContext = {
@@ -41,7 +38,7 @@ export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode 
       <main className="mx-auto max-w-6xl p-4 md:p-8">
         <div className="mb-4 flex justify-end">
           <AuthActionButton
-            className="inline-flex min-h-11 items-center justify-center rounded-md border border-rule bg-surface px-4 text-sm font-semibold text-ink"
+            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-md border border-rule bg-surface px-4 text-sm font-semibold text-ink"
             intent="sign-out"
           >
             Sign out

@@ -21,6 +21,16 @@ body {
   @apply bg-app-canvas text-ink;
 }
 
+.focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.focus-ring:focus-visible {
+  outline-color: var(--color-accent-hover);
+  box-shadow: 0 0 0 4px var(--color-accent-soft);
+}
+
 .task-sort-select {
   inline-size: 100%;
   min-inline-size: 0;
@@ -199,5 +209,16 @@ body {
 
   .task-sort-select__control--custom option::checkmark {
     color: var(--color-accent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

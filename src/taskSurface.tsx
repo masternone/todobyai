@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Archive, Check, Edit3, Inbox, Plus, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
@@ -14,19 +14,18 @@ import { type TaskDraftFields, useTaskAppState } from "./taskAppState";
 
 type TaskSurfaceView = "Tasks" | "Archive";
 type TaskListSection = { title: string; tasks: Task[]; emptyText: string };
+type DeleteConfirmation = { id: string; title: string } | null;
 
 const emptyDraft: TaskDraftFields = { title: "", note: "", dueDate: "" };
 const filters: TaskFilter[] = ["All", "Past Due", "Due Today"];
 const sorts: TaskSort[] = ["Newest", "Oldest", "Recently Modified", "By Due Date"];
-const buttonShape =
-  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-semibold transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50";
+const focusRing = "focus-ring";
+const buttonShape = `${focusRing} inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-semibold transition-colors duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-50`;
 const inactiveButton = "border-rule bg-surface text-ink hover:bg-app-canvas";
 const activeButton = "border-accent bg-accent text-surface hover:bg-accent-hover";
 const iconButton = `${buttonShape} ${inactiveButton} h-11 min-h-11 w-11 p-0`;
-const taskCheckButton =
-  "inline-flex h-11 min-h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-md border transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
-const fieldClass =
-  "min-h-11 w-full rounded-md border border-rule bg-surface px-3 text-ink focus:outline-2 focus:outline-offset-2 focus:outline-accent";
+const taskCheckButton = `${focusRing} inline-flex h-11 min-h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-md border transition-colors duration-150 ease-out`;
+const fieldClass = `${focusRing} min-h-11 w-full rounded-md border border-rule bg-surface px-3 text-ink`;
 
 function cx(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(" ");
@@ -54,6 +53,17 @@ function taskSortSelectMarkup(value: TaskSort): { __html: string } {
 
 export function TaskSurface({ view }: { view: TaskSurfaceView }) {
   const workflow = useTaskSurfaceWorkflow(view);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<DeleteConfirmation>(null);
+
+  async function confirmDelete() {
+    if (!deleteConfirmation) {
+      return;
+    }
+
+    const taskId = deleteConfirmation.id;
+    setDeleteConfirmation(null);
+    await workflow.actions.deleteTask(taskId);
+  }
 
   return (
     <>
@@ -80,11 +90,20 @@ export function TaskSurface({ view }: { view: TaskSurfaceView }) {
           tasks={section.tasks}
           title={section.title}
           today={workflow.today}
-          onDelete={workflow.actions.deleteTask}
+          onDelete={(task) => setDeleteConfirmation({ id: task.id, title: task.title })}
           onMove={workflow.actions.moveTask}
           onUpdate={workflow.actions.updateTask}
         />
       ))}
+      <ConfirmationDialog
+        cancelLabel="Keep Task"
+        confirmLabel="Delete Task"
+        description="This permanently removes the task from Todo by AI. It cannot be undone."
+        open={Boolean(deleteConfirmation)}
+        title={deleteConfirmation ? `Delete "${deleteConfirmation.title}"?` : "Delete Task?"}
+        onCancel={() => setDeleteConfirmation(null)}
+        onConfirm={() => void confirmDelete()}
+      />
     </>
   );
 }
@@ -289,7 +308,7 @@ function TaskSurfaceControls({
       <label className="inline-flex min-h-11 items-center gap-2 font-semibold text-ink-muted">
         <input
           checked={workflow.mainView.showCompleted}
-          className="h-4 w-4 accent-accent"
+          className="focus-ring h-4 w-4 accent-accent"
           onChange={(event) => workflow.mainView.setShowCompleted(event.target.checked)}
           type="checkbox"
         />
@@ -301,12 +320,14 @@ function TaskSurfaceControls({
 
 function TaskComposer({
   draft,
+  titleInputRef,
   onAdd,
   onCancel,
   onChange,
   onCreated,
 }: {
   draft: TaskDraftFields;
+  titleInputRef?: React.RefObject<HTMLInputElement | null>;
   onAdd: (input: TaskDraftFields) => Promise<void>;
   onCancel: () => void;
   onChange: (draft: TaskDraftFields) => void;
@@ -342,6 +363,7 @@ function TaskComposer({
             aria-invalid={showTitleRequired}
             aria-label="Title"
             className={fieldClass}
+            ref={titleInputRef}
             placeholder="Task Title (required)"
             value={draft.title}
             onBlur={() => setShowTitleRequired(titleMissing)}
@@ -410,12 +432,18 @@ function TaskComposerDialog({
   onCreated: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const keepEditingButtonRef = useRef<HTMLButtonElement>(null);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const hasDraftContent = Boolean(draft.title.trim() || draft.note.trim() || draft.dueDate);
 
   function requestClose() {
-    if (!hasDraftContent || window.confirm("Discard this unsaved task draft?")) {
+    if (!hasDraftContent) {
       onClose();
+      return;
     }
+
+    setConfirmingDiscard(true);
   }
 
   useEffect(() => {
@@ -423,7 +451,14 @@ function TaskComposerDialog({
     if (dialog && !dialog.open) {
       dialog.showModal();
     }
+    window.requestAnimationFrame(() => titleInputRef.current?.focus());
   }, []);
+
+  useLayoutEffect(() => {
+    if (confirmingDiscard) {
+      keepEditingButtonRef.current?.focus();
+    }
+  }, [confirmingDiscard]);
 
   return (
     <dialog
@@ -457,11 +492,121 @@ function TaskComposerDialog({
         </div>
         <TaskComposer
           draft={draft}
+          titleInputRef={titleInputRef}
           onAdd={onAdd}
-          onCancel={onCancel}
+          onCancel={requestClose}
           onChange={onChange}
           onCreated={onCreated}
         />
+        {confirmingDiscard ? (
+          <div
+            aria-labelledby="discard-draft-title"
+            aria-describedby="discard-draft-description"
+            className="mt-4 rounded-md border border-danger-rule bg-danger-soft p-3"
+            role="alertdialog"
+          >
+            <h3 className="font-bold text-ink-strong" id="discard-draft-title">
+              Discard unsaved draft?
+            </h3>
+            <p className="mt-1 text-sm text-ink" id="discard-draft-description">
+              The title, note, and due date you entered will be lost.
+            </p>
+            <div className="mt-3 flex flex-wrap justify-end gap-2">
+              <button
+                className={buttonClass(false)}
+                ref={keepEditingButtonRef}
+                type="button"
+                onClick={() => {
+                  setConfirmingDiscard(false);
+                  window.requestAnimationFrame(() => titleInputRef.current?.focus());
+                }}
+              >
+                Keep Editing
+              </button>
+              <button className={buttonClass(true)} type="button" onClick={onCancel}>
+                Discard Draft
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </dialog>
+  );
+}
+
+function ConfirmationDialog({
+  cancelLabel,
+  confirmLabel,
+  description,
+  open,
+  title,
+  onCancel,
+  onConfirm,
+}: {
+  cancelLabel: string;
+  confirmLabel: string;
+  description: string;
+  open: boolean;
+  title: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+
+    if (open && !dialog.open) {
+      dialog.showModal();
+      window.requestAnimationFrame(() => cancelButtonRef.current?.focus());
+    } else if (!open && dialog.open) {
+      dialog.close();
+    }
+  }, [open]);
+
+  return (
+    <dialog
+      aria-labelledby="confirmation-dialog-title"
+      aria-describedby="confirmation-dialog-description"
+      className="m-0 h-full max-h-none w-full max-w-none border-0 bg-transparent p-4 backdrop:bg-ink-strong/40 open:grid open:place-items-center"
+      ref={dialogRef}
+      onCancel={(event) => {
+        event.preventDefault();
+        onCancel();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onCancel();
+        }
+      }}
+    >
+      <div className="w-full max-w-md rounded-lg border border-rule bg-surface p-4 text-ink shadow-xl">
+        <h2
+          className="break-words text-lg font-bold text-ink-strong"
+          id="confirmation-dialog-title"
+        >
+          {title}
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-ink" id="confirmation-dialog-description">
+          {description}
+        </p>
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button
+            className={buttonClass(false)}
+            ref={cancelButtonRef}
+            type="button"
+            onClick={onCancel}
+          >
+            {cancelLabel}
+          </button>
+          <button className={buttonClass(true)} type="button" onClick={onConfirm}>
+            {confirmLabel}
+          </button>
+        </div>
       </div>
     </dialog>
   );
@@ -484,7 +629,7 @@ function SegmentedControl<T extends string>({
       <div className="flex flex-wrap items-center gap-2">
         {values.map((item) => (
           <button
-            className={buttonClass(item === value)}
+            className={cx(buttonClass(item === value), "min-w-11")}
             key={item}
             onClick={() => onChange(item)}
             type="button"
@@ -524,7 +669,7 @@ function TaskList(props: {
   tasks: Task[];
   today: string;
   emptyText: string;
-  onDelete: (taskId: string) => Promise<void>;
+  onDelete: (task: Task) => void;
   onMove: (taskId: string, state: TaskState) => Promise<void>;
   onUpdate: (taskId: string, input: TaskDraftFields) => Promise<void>;
 }) {
@@ -589,7 +734,7 @@ function TaskRow({
 }: {
   task: Task;
   today: string;
-  onDelete: (taskId: string) => Promise<void>;
+  onDelete: (task: Task) => void;
   onMove: (taskId: string, state: TaskState) => Promise<void>;
   onUpdate: (taskId: string, input: TaskDraftFields) => Promise<void>;
 }) {
@@ -766,7 +911,7 @@ function TaskRow({
             <button
               aria-label="Delete Task"
               className={iconButton}
-              onClick={() => void onDelete(task.id)}
+              onClick={() => onDelete(task)}
               title="Delete Task"
             >
               <Trash2 size={16} />

@@ -20,13 +20,13 @@ function SplashPage() {
         </p>
         <div className="flex flex-wrap gap-3">
           <AuthActionButton
-            className="inline-flex min-h-11 items-center justify-center rounded-md border border-accent bg-accent px-4 text-sm font-semibold text-surface"
+            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-md border border-accent bg-accent px-4 text-sm font-semibold text-surface"
             intent="sign-in"
           >
             Sign in
           </AuthActionButton>
           <AuthActionButton
-            className="inline-flex min-h-11 items-center justify-center rounded-md border border-rule bg-surface px-4 text-sm font-semibold text-ink"
+            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-md border border-rule bg-surface px-4 text-sm font-semibold text-ink"
             intent="sign-up"
           >
             Sign up
