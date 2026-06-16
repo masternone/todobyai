@@ -1,4 +1,5 @@
 import { auth } from "@clerk/tanstack-react-start/server";
+import { getCookie } from "@tanstack/react-start/server";
 import type { User } from "../domain/task";
 
 export type CurrentUserProvider = () => Promise<User>;
@@ -12,7 +13,9 @@ export class AuthenticationRequiredError extends Error {
 
 export async function getCurrentUserFromSession(): Promise<User> {
   if (process.env.VITE_TODO_BY_AI_AUTH_MODE === "test") {
-    return { id: process.env.TODO_BY_AI_TEST_USER_ID ?? "test-user" };
+    return {
+      id: getCookie("todo-by-ai-test-user") ?? process.env.TODO_BY_AI_TEST_USER_ID ?? "test-user",
+    };
   }
 
   const session = await getClerkSession();

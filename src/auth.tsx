@@ -18,6 +18,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const testUserStorageKey = "todo-by-ai-test-user";
+const defaultTestUserId = "test-user";
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const authMode = import.meta.env.VITE_TODO_BY_AI_AUTH_MODE;
 
@@ -154,7 +155,7 @@ function TestAuthProvider({ children }: Readonly<{ children: React.ReactNode }>)
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    setIsSignedIn(window.localStorage.getItem(testUserStorageKey) === "signed-in");
+    setIsSignedIn(Boolean(window.localStorage.getItem(testUserStorageKey)));
     setIsLoaded(true);
   }, []);
 
@@ -163,17 +164,18 @@ function TestAuthProvider({ children }: Readonly<{ children: React.ReactNode }>)
       isLoaded,
       isSignedIn,
       signIn: (redirectTo = "/task") => {
-        window.localStorage.setItem(testUserStorageKey, "signed-in");
+        setTestUserIdentity(window.localStorage.getItem(testUserStorageKey) ?? defaultTestUserId);
         setIsSignedIn(true);
         window.location.href = redirectTo;
       },
       signUp: (redirectTo = "/task") => {
-        window.localStorage.setItem(testUserStorageKey, "signed-in");
+        setTestUserIdentity(window.localStorage.getItem(testUserStorageKey) ?? defaultTestUserId);
         setIsSignedIn(true);
         window.location.href = redirectTo;
       },
       signOut: () => {
         window.localStorage.removeItem(testUserStorageKey);
+        clearTestUserIdentity();
         setIsSignedIn(false);
         void navigate({ to: "/" });
       },
@@ -182,6 +184,15 @@ function TestAuthProvider({ children }: Readonly<{ children: React.ReactNode }>)
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+function setTestUserIdentity(userId: string) {
+  window.localStorage.setItem(testUserStorageKey, userId);
+  document.cookie = `${testUserStorageKey}=${encodeURIComponent(userId)}; Path=/; SameSite=Lax`;
+}
+
+function clearTestUserIdentity() {
+  document.cookie = `${testUserStorageKey}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
 function MissingAuthProvider({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const testRunId = `E2E ${new Date().toISOString()}`;
+const testUserStorageKey = "todo-by-ai-test-user";
 
 type TaskFixture = {
   title: string;
@@ -118,6 +119,54 @@ test("creates Tasks across required and optional fields, filters them, changes T
   await expect(taskList(page, "Active").getByText(tasks[2].title)).toBeVisible();
 
   await deleteCreatedTasks(page, finalTaskTitles);
+});
+
+test("keeps Task lists private between signed-in Users", async ({ browser }) => {
+  const firstUserContext = await browser.newContext();
+  const secondUserContext = await browser.newContext();
+  const firstUserPage = await firstUserContext.newPage();
+  const secondUserPage = await secondUserContext.newPage();
+  const firstUserTask = `${testRunId} first User private Task`;
+  const secondUserTask = `${testRunId} second User private Task`;
+
+  try {
+    await signInForTest(firstUserPage, "test-user-first");
+    await firstUserPage.goto("/task");
+    await expect(firstUserPage.getByRole("heading", { name: "Tasks" })).toBeVisible();
+    await expect(firstUserPage.getByLabel("Loading Tasks")).toBeHidden();
+
+    await createTask(firstUserPage, {
+      title: firstUserTask,
+      note: "Only the first signed-in User should see this Task",
+      dueDate: "",
+      dueDateKind: "none",
+    });
+    await expect(taskRow(firstUserPage, firstUserTask)).toBeVisible();
+
+    await signInForTest(secondUserPage, "test-user-second");
+    await secondUserPage.goto("/task");
+    await expect(secondUserPage.getByRole("heading", { name: "Tasks" })).toBeVisible();
+    await expect(secondUserPage.getByLabel("Loading Tasks")).toBeHidden();
+    await expect(taskRow(secondUserPage, firstUserTask)).toBeHidden();
+
+    await createTask(secondUserPage, {
+      title: secondUserTask,
+      note: "Only the second signed-in User should see this Task",
+      dueDate: "",
+      dueDateKind: "none",
+    });
+    await expect(taskRow(secondUserPage, secondUserTask)).toBeVisible();
+    await expect(taskRow(secondUserPage, firstUserTask)).toBeHidden();
+
+    await firstUserPage.reload();
+    await expect(taskRow(firstUserPage, firstUserTask)).toBeVisible();
+    await expect(taskRow(firstUserPage, secondUserTask)).toBeHidden();
+  } finally {
+    await deleteCreatedTasks(firstUserPage, [firstUserTask]);
+    await deleteCreatedTasks(secondUserPage, [secondUserTask]);
+    await firstUserContext.close();
+    await secondUserContext.close();
+  }
 });
 
 function buildTaskMatrix(dates: {
@@ -293,8 +342,12 @@ function taskEditor(page: Page): Locator {
   return page.locator("article").filter({ has: page.getByRole("button", { name: "Save" }) });
 }
 
-async function signInForTest(page: Page) {
-  await page.addInitScript(() => {
-    window.localStorage.setItem("todo-by-ai-test-user", "signed-in");
-  });
+async function signInForTest(page: Page, userId = "test-user") {
+  await page.addInitScript(
+    ({ storageKey, signedInUserId }) => {
+      window.localStorage.setItem(storageKey, signedInUserId);
+      document.cookie = `${storageKey}=${encodeURIComponent(signedInUserId)}; Path=/; SameSite=Lax`;
+    },
+    { storageKey: testUserStorageKey, signedInUserId: userId },
+  );
 }
