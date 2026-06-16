@@ -305,13 +305,19 @@ function TaskSurfaceControls({
         onChange={workflow.setFilter}
       />
       <TaskSortSelect value={workflow.mainView.sort} onChange={workflow.mainView.setSort} />
-      <label className="inline-flex min-h-11 items-center gap-2 font-semibold text-ink-muted">
+      <label className="relative inline-flex min-h-11 cursor-pointer items-center gap-2 font-semibold text-ink-muted">
         <input
           checked={workflow.mainView.showCompleted}
-          className="focus-ring h-4 w-4 accent-accent"
+          className="peer absolute inset-0 h-full w-full cursor-pointer opacity-0"
           onChange={(event) => workflow.mainView.setShowCompleted(event.target.checked)}
           type="checkbox"
         />
+        <span
+          className="pointer-events-none inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border border-rule bg-surface text-surface transition-colors duration-150 ease-out peer-checked:border-accent peer-checked:bg-accent peer-focus-visible:shadow-[0_0_0_4px_var(--color-accent-soft)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-hover"
+          aria-hidden="true"
+        >
+          {workflow.mainView.showCompleted ? <Check size={14} strokeWidth={3} /> : null}
+        </span>
         <span>Show completed</span>
       </label>
     </section>

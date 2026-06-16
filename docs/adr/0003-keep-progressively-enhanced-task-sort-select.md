@@ -1,0 +1,3 @@
+# Keep the progressively enhanced Task Sort select
+
+We will keep the customized Task Sort select that uses `appearance: base-select` behind `@supports` instead of replacing it with a plain native select. Browsers that support the feature get a more consistent Todo by AI control that still preserves select semantics; browsers that do not support it ignore the customization and fall back to default select behavior. This is an intentional progressive enhancement, so future responsive or accessibility passes should preserve it unless the enhancement itself breaks native fallback behavior, keyboard access, or Task Sort semantics.
