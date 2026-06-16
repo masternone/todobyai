@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createElement, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Archive, Check, Edit3, Inbox, Plus, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
@@ -33,22 +33,6 @@ function cx(...classes: Array<string | false | null | undefined>): string {
 
 function buttonClass(active = false): string {
   return cx(buttonShape, active ? activeButton : inactiveButton);
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
-function taskSortSelectMarkup(value: TaskSort): { __html: string } {
-  const optionMarkup = sorts.map((item) => `<option value="${item}">${item}</option>`).join("");
-  const selectedValue = escapeHtml(value);
-  return {
-    __html: `<button type="button"><selectedcontent hidden></selectedcontent><span class="task-sort-select__value">${selectedValue}</span></button>${optionMarkup}`,
-  };
 }
 
 export function TaskSurface({ view }: { view: TaskSurfaceView }) {
@@ -662,9 +646,18 @@ function TaskSortSelect({
         className={cx(fieldClass, "task-sort-select__control task-sort-select__control--custom")}
         value={value}
         onChange={(event) => onChange(event.target.value as TaskSort)}
-        dangerouslySetInnerHTML={taskSortSelectMarkup(value)}
         suppressHydrationWarning
-      />
+      >
+        <button type="button">
+          {createElement("selectedcontent", { hidden: true })}
+          <span className="task-sort-select__value">{value}</span>
+        </button>
+        {sorts.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }

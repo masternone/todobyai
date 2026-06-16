@@ -122,6 +122,7 @@ body {
 }
 
 .task-sort-select__control {
+  block-size: calc(2.75rem + 2px);
   color-scheme: light;
   cursor: pointer;
   padding-inline-end: 2.25rem;
@@ -138,7 +139,6 @@ body {
   }
 
   .task-sort-select__control--custom {
-    block-size: 2.75rem;
     inline-size: 100%;
     padding: 0;
     overflow: clip;
