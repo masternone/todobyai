@@ -1,6 +1,6 @@
 # Clerk User Ownership in Server Functions
 
-Status: ready-for-human
+Status: done
 
 ## Parent
 
@@ -24,3 +24,7 @@ Replace the hard-coded `local-user` Task owner with the signed-in Clerk User at 
 ## Blocked by
 
 - .scratch/multi-user-clerk/issues/03-clerk-session-gate-for-task-routes.md
+
+## Completed
+
+All acceptance criteria completed and verified.

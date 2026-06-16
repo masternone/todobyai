@@ -1,6 +1,6 @@
 # Provision Clerk Application and Local Keys
 
-Status: ready-for-human
+Status: done
 
 ## Parent
 
@@ -22,3 +22,7 @@ Create the Clerk application needed for Todo by AI multi User support and provid
 ## Blocked by
 
 None - can start immediately
+
+## Completed
+
+All acceptance criteria completed and verified.

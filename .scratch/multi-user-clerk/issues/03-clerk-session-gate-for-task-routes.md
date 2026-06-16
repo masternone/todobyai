@@ -1,6 +1,6 @@
 # Clerk Session Gate for Task Routes
 
-Status: ready-for-human
+Status: done
 
 ## Parent
 
@@ -27,3 +27,7 @@ Wire Clerk into the app routing experience. Signed-out visitors can sign in or s
 
 - .scratch/multi-user-clerk/issues/01-provision-clerk-application-and-local-keys.md
 - .scratch/multi-user-clerk/issues/02-public-splash-page-and-task-route-rename.md
+
+## Completed
+
+All acceptance criteria completed and verified.
