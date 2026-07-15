@@ -1,6 +1,6 @@
 # Public Splash Page and Task Route Rename
 
-Status: ready-for-agent
+Status: done
 
 ## Parent
 
@@ -24,3 +24,7 @@ Move the current Task experience off the public root route. The root route becom
 ## Blocked by
 
 None - can start immediately
+
+## Completed
+
+All acceptance criteria completed and verified.

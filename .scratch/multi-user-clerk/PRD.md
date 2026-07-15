@@ -1,6 +1,6 @@
 # Multi User Clerk Support
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -128,3 +128,7 @@ Todo by AI should not introduce a local User profile yet. Existing `local-user` 
 - Clerk keys needed for local development are `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`.
 - Use Clerk test keys for local development. The publishable key may be exposed to the browser; the secret key must remain server-side and uncommitted.
 - ADR 0002 records why Clerk was chosen over Supabase Auth, Auth0, and Better Auth.
+
+## Completed
+
+All implementation issues are complete and verified.
