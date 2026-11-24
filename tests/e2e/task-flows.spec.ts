@@ -169,6 +169,255 @@ test("keeps Task lists private between signed-in Users", async ({ browser }) => 
   }
 });
 
+for (const width of [390, 1280]) {
+  test(`announces a rejected create at ${width}px without hiding the draft`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 });
+    await signInForTest(page, `test-user-create-error-${width}`);
+    await page.goto("/task");
+    await page.getByRole("button", { name: "Add Task" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add Task" });
+    await dialog.getByLabel("Title").fill("Keep the draft when saving fails");
+    await dialog.getByLabel("Note").fill("The note and due date should stay here too.");
+    await dialog.getByLabel("Due Date").fill("2027-01-15");
+    const pending = await holdTaskCommands(page);
+    pending.reject();
+    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await expect(dialog.getByRole("alert")).toContainText(
+      "Could not confirm whether the task was created",
+    );
+    await expect(dialog.getByLabel("Title")).toHaveValue("Keep the draft when saving fails");
+    const alertBounds = await dialog.getByRole("alert").boundingBox();
+    expect(alertBounds).not.toBeNull();
+    expect(alertBounds!.x).toBeGreaterThanOrEqual(0);
+    expect(alertBounds!.x + alertBounds!.width).toBeLessThanOrEqual(width);
+    await page.screenshot({ path: testInfo.outputPath("failed-create.png"), fullPage: true });
+  });
+}
+
+test("keeps a failed create draft and retries once without unhandled errors", async ({ page }) => {
+  const pageErrors: Error[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error));
+  await signInForTest(page, "test-user-failed-create");
+  await page.goto("/task");
+  await page.getByRole("button", { name: "Add Task" }).click();
+  const dialog = page.getByRole("dialog", { name: "Add Task" });
+  const title = `${testRunId} failed create`;
+  await dialog.getByLabel("Title").fill(title);
+  await dialog.getByLabel("Note").fill("Keep this note");
+  await dialog.getByLabel("Due Date").fill("2027-01-15");
+
+  const pending = await holdTaskCommands(page);
+  await dialog.getByRole("button", { name: "Create", exact: true }).click();
+  await pending.started;
+  await expect(dialog.getByRole("button", { name: "Creating…" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Close Dialog" })).toBeDisabled();
+  await expect(dialog.getByLabel("Title")).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+  pending.reject();
+
+  await expect(dialog.getByRole("alert")).toContainText(
+    "Could not confirm whether the task was created",
+  );
+  await expect(dialog.getByRole("alert")).toContainText("refresh Tasks before trying again");
+  await expect(dialog.getByLabel("Title")).toHaveValue(title);
+  await expect(dialog.getByLabel("Note")).toHaveValue("Keep this note");
+  await expect(dialog.getByLabel("Due Date")).toHaveValue("2027-01-15");
+  await expect(dialog.getByRole("button", { name: "Create", exact: true })).toBeEnabled();
+  expect(pending.count()).toBe(1);
+  await page.unrouteAll({ behavior: "wait" });
+  await dialog.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(taskRow(page, title)).toHaveCount(1);
+  await page.reload();
+  await expect(taskRow(page, title)).toHaveCount(1);
+  expect(pageErrors).toEqual([]);
+  await deleteCreatedTasks(page, [title]);
+});
+
+test("keeps failed edits in the editor with all entered fields", async ({ page }) => {
+  const pageErrors: Error[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error));
+  await signInForTest(page, "test-user-failed-edit");
+  await page.goto("/task");
+  const title = `${testRunId} failed edit`;
+  await createTask(page, { title, note: "Original note", dueDate: "", dueDateKind: "none" });
+  await taskRow(page, title).getByRole("button", { name: "Edit Task" }).click();
+  const editor = taskEditor(page);
+  await editor.getByLabel("Title").fill(`${title} changed`);
+  await editor.getByLabel("Note").fill("Changed note");
+  await editor.getByLabel("Due Date").fill("2027-02-03");
+  const pending = await holdTaskCommands(page);
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await pending.started;
+  await expect(editor.getByRole("button", { name: "Saving…" })).toBeDisabled();
+  await expect(editor.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+  await expect(editor.getByLabel("Title")).toBeDisabled();
+  pending.reject();
+  await expect(editor.getByRole("alert")).toContainText("task was saved");
+  await expect(editor.getByLabel("Title")).toHaveValue(`${title} changed`);
+  await expect(editor.getByLabel("Note")).toHaveValue("Changed note");
+  await expect(editor.getByLabel("Due Date")).toHaveValue("2027-02-03");
+  await expect(editor.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+  await expect(editor.getByRole("button", { name: "Complete Task" })).toBeDisabled();
+  await page.unrouteAll({ behavior: "wait" });
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    taskRow(page, `${title} changed`).getByRole("button", { name: "Edit Task" }),
+  ).toBeVisible();
+  expect(pageErrors).toEqual([]);
+  await deleteCreatedTasks(page, [`${title} changed`]);
+});
+
+test("keeps failed delete confirmation open until deletion succeeds", async ({ page }) => {
+  const pageErrors: Error[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error));
+  await signInForTest(page, "test-user-failed-delete");
+  await page.goto("/task");
+  const title = `${testRunId} failed delete`;
+  await createTask(page, { title, note: "", dueDate: "", dueDateKind: "none" });
+  await taskRow(page, title).getByRole("button", { name: "Delete Task" }).click();
+  const dialog = page.getByRole("dialog", { name: /Delete/ });
+  const pending = await holdTaskCommands(page);
+  await dialog.getByRole("button", { name: "Delete Task", exact: true }).click();
+  await pending.started;
+  await expect(dialog.getByRole("button", { name: "Deleting…" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Keep Task" })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+  pending.reject();
+  await expect(dialog.getByRole("alert")).toContainText("task was deleted");
+  await expect(dialog.getByRole("button", { name: "Delete Task", exact: true })).toBeEnabled();
+  await expect(taskRow(page, title)).toBeVisible();
+  await page.unrouteAll({ behavior: "wait" });
+  await dialog.getByRole("button", { name: "Delete Task", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(taskRow(page, title)).toBeHidden();
+  expect(pageErrors).toEqual([]);
+});
+
+for (const action of ["complete", "archive", "restore completed", "restore archived"] as const) {
+  test(`reports a failed ${action} without changing Task state`, async ({ page }) => {
+    const pageErrors: Error[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+    await signInForTest(page, `test-user-failed-${action.replace(" ", "-")}`);
+    await page.goto("/task");
+    const title = `${testRunId} failed ${action}`;
+    await createTask(page, { title, note: "", dueDate: "", dueDateKind: "none" });
+    if (action === "restore completed") {
+      await completeTask(page, title);
+      await page.getByLabel("Show completed").check();
+    } else if (action === "restore archived") {
+      await archiveTask(page, title);
+      await page.getByRole("link", { name: "Archive" }).click();
+    }
+    const row = taskRow(page, title);
+    const buttonName =
+      action === "complete"
+        ? "Complete Task"
+        : action === "archive"
+          ? "Archive Task"
+          : "Restore Task";
+    const pending = await holdTaskCommands(page);
+    await row.getByRole("button", { name: buttonName }).first().click();
+    await pending.started;
+    await expect(row).toHaveAttribute("aria-busy", "true");
+    await expect(row.locator("button:enabled")).toHaveCount(0);
+    pending.reject();
+    await expect(row.getByRole("alert")).toContainText("Could not confirm whether");
+    await expect(row.getByRole("button", { name: buttonName }).first()).toBeEnabled();
+    await expect(row).toHaveAttribute("aria-busy", "false");
+    await page.unrouteAll({ behavior: "wait" });
+    await row.getByRole("button", { name: buttonName }).first().click();
+    if (action === "restore completed") {
+      await expect(taskList(page, "Active").getByText(title)).toBeVisible();
+    } else {
+      await expect(row).toBeHidden();
+    }
+    expect(pageErrors).toEqual([]);
+    await deleteCreatedTasks(page, [title]);
+  });
+}
+
+test("reports a saved create separately from a failed refresh", async ({ page }) => {
+  const pageErrors: Error[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error));
+  await signInForTest(page, "test-user-saved-refresh-failed");
+  await page.goto("/task");
+  await expect(page.getByRole("button", { name: "Add Task" })).toBeEnabled();
+  let commandCount = 0;
+  await page.route("**/_serverFn/**", (route) => {
+    if (route.request().method() === "GET") return route.abort("failed");
+    commandCount += 1;
+    return route.continue();
+  });
+  const title = `${testRunId} saved refresh failed`;
+  await createTask(page, { title, note: "", dueDate: "", dueDateKind: "none" });
+  await expect(page.getByRole("alert")).toContainText("Your change was saved");
+  await page.getByRole("button", { name: "Refresh Tasks", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Your change was saved");
+  await expect(page.getByRole("button", { name: "Refresh Tasks", exact: true })).toBeEnabled();
+  expect(commandCount).toBe(1);
+  await page.unrouteAll({ behavior: "wait" });
+  await page.getByRole("button", { name: "Refresh Tasks", exact: true }).click();
+  await expect(taskRow(page, title)).toHaveCount(1);
+  await expect(page.getByRole("alert")).toBeHidden();
+  expect(pageErrors).toEqual([]);
+  await deleteCreatedTasks(page, [title]);
+});
+
+test("does not retry a create automatically when its response is lost", async ({ page }) => {
+  const pageErrors: Error[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error));
+  await signInForTest(page, "test-user-lost-create-response");
+  await page.goto("/task");
+  let commandCount = 0;
+  await page.route("**/_serverFn/**", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    commandCount += 1;
+    await route.fetch();
+    await route.abort("failed");
+  });
+  await page.getByRole("button", { name: "Add Task" }).click();
+  const dialog = page.getByRole("dialog", { name: "Add Task" });
+  const title = `${testRunId} lost response`;
+  await dialog.getByLabel("Title").fill(title);
+  await dialog.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "Could not confirm whether the task was created",
+  );
+  await expect(dialog.getByLabel("Title")).toHaveValue(title);
+  expect(commandCount).toBe(1);
+  await page.unrouteAll({ behavior: "wait" });
+  await page.reload();
+  await expect(taskRow(page, title)).toHaveCount(1);
+  expect(pageErrors).toEqual([]);
+  await deleteCreatedTasks(page, [title]);
+});
+
+async function holdTaskCommands(page: Page) {
+  let markStarted = () => {};
+  let reject = () => {};
+  let count = 0;
+  const started = new Promise<void>((resolve) => {
+    markStarted = resolve;
+  });
+  const held = new Promise<void>((resolve) => {
+    reject = resolve;
+  });
+  await page.route("**/_serverFn/**", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    count += 1;
+    markStarted();
+    await held;
+    await route.abort("failed");
+  });
+  return { started, reject, count: () => count };
+}
+
 function buildTaskMatrix(dates: {
   yesterday: string;
   today: string;
@@ -344,7 +593,7 @@ function taskRow(page: Page, title: string): Locator {
 }
 
 function taskEditor(page: Page): Locator {
-  return page.locator("article").filter({ has: page.getByRole("button", { name: "Save" }) });
+  return page.locator("article").filter({ has: page.locator("form") });
 }
 
 async function signInForTest(page: Page, userId = "test-user") {

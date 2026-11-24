@@ -11,6 +11,7 @@ import {
   type TaskState,
 } from "./domain/task";
 import { type TaskDraftFields, useTaskAppState } from "./taskAppState";
+import { taskActionError } from "./taskActionError";
 
 type TaskSurfaceView = "Tasks" | "Archive";
 type TaskListSection = { title: string; tasks: Task[]; emptyText: string };
@@ -24,7 +25,7 @@ const buttonShape = `${focusRing} inline-flex min-h-11 cursor-pointer items-cent
 const inactiveButton = "border-control-rule bg-surface text-ink hover:bg-app-canvas";
 const activeButton = "border-accent bg-accent text-surface hover:bg-accent-hover";
 const iconButton = `${buttonShape} ${inactiveButton} h-11 min-h-11 w-11 p-0`;
-const taskCheckButton = `${focusRing} inline-flex h-11 min-h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-md border transition-colors duration-150 ease-out`;
+const taskCheckButton = `${focusRing} inline-flex h-11 min-h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-md border transition-colors duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-50`;
 const fieldClass = `${focusRing} min-h-11 w-full rounded-md border border-control-rule bg-surface px-3 text-ink`;
 
 function cx(...classes: Array<string | false | null | undefined>): string {
@@ -38,15 +39,25 @@ function buttonClass(active = false): string {
 export function TaskSurface({ view }: { view: TaskSurfaceView }) {
   const workflow = useTaskSurfaceWorkflow(view);
   const [deleteConfirmation, setDeleteConfirmation] = useState<DeleteConfirmation>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function confirmDelete() {
-    if (!deleteConfirmation) {
+    if (!deleteConfirmation || deleting) {
       return;
     }
 
     const taskId = deleteConfirmation.id;
-    setDeleteConfirmation(null);
-    await workflow.actions.deleteTask(taskId);
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await workflow.actions.deleteTask(taskId);
+      setDeleteConfirmation(null);
+    } catch (error) {
+      setDeleteError(taskActionError(error, "delete"));
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -64,7 +75,19 @@ export function TaskSurface({ view }: { view: TaskSurfaceView }) {
       ) : null}
       <TaskSurfaceControls workflow={workflow} />
       {workflow.queryErrorMessage ? (
-        <p className="py-4 text-danger">{workflow.queryErrorMessage}</p>
+        <div className="py-4">
+          <p className="text-danger" role="alert">
+            {workflow.queryErrorMessage}
+          </p>
+          <button
+            className={cx(buttonClass(false), "mt-2")}
+            disabled={workflow.isLoading}
+            onClick={() => void workflow.refresh()}
+            type="button"
+          >
+            Refresh Tasks
+          </button>
+        </div>
       ) : null}
       {workflow.sections.map((section) => (
         <TaskList
@@ -74,7 +97,10 @@ export function TaskSurface({ view }: { view: TaskSurfaceView }) {
           tasks={section.tasks}
           title={section.title}
           today={workflow.today}
-          onDelete={(task) => setDeleteConfirmation({ id: task.id, title: task.title })}
+          onDelete={(task) => {
+            setDeleteError(null);
+            setDeleteConfirmation({ id: task.id, title: task.title });
+          }}
           onMove={workflow.actions.moveTask}
           onUpdate={workflow.actions.updateTask}
         />
@@ -83,9 +109,13 @@ export function TaskSurface({ view }: { view: TaskSurfaceView }) {
         cancelLabel="Keep Task"
         confirmLabel="Delete Task"
         description="This permanently removes the task from Todo by AI. It cannot be undone."
+        errorMessage={deleteError}
         open={Boolean(deleteConfirmation)}
+        pending={deleting}
         title={deleteConfirmation ? `Delete "${deleteConfirmation.title}"?` : "Delete Task?"}
-        onCancel={() => setDeleteConfirmation(null)}
+        onCancel={() => {
+          if (!deleting) setDeleteConfirmation(null);
+        }}
         onConfirm={() => void confirmDelete()}
       />
     </>
@@ -103,18 +133,18 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
   const [composerDraft, setComposerDraft] = useState<TaskDraftFields>(emptyDraft);
   const [queryState, setQueryState] = useState<{
     archivedTasks: Task[];
-    errorMessage: string | null;
+    error: { message: string; afterWrite: boolean } | null;
     isLoading: boolean;
     mainView: MainViewTasks;
   }>({
     archivedTasks: [],
-    errorMessage: null,
+    error: null,
     isLoading: true,
     mainView: { activeTasks: [], completedTasks: [] },
   });
 
-  async function loadCurrentTasks(options?: { cancelled?: () => boolean }) {
-    setQueryState((current) => ({ ...current, errorMessage: null, isLoading: true }));
+  async function loadCurrentTasks(options?: { cancelled?: () => boolean; afterWrite?: boolean }) {
+    setQueryState((current) => ({ ...current, isLoading: true }));
     try {
       const next =
         view === "Tasks"
@@ -130,15 +160,20 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
       if (!options?.cancelled?.()) {
         setQueryState({
           ...next,
-          errorMessage: null,
+          error: null,
           isLoading: false,
         });
       }
-    } catch (error) {
+    } catch {
       if (!options?.cancelled?.()) {
         setQueryState((current) => ({
           ...current,
-          errorMessage: error instanceof Error ? error.message : "Could not load Tasks.",
+          error: {
+            message: options?.afterWrite
+              ? "Your change was saved, but Tasks could not be refreshed. Refresh Tasks before making another change."
+              : "Could not load Tasks. Check your connection and refresh Tasks to try again.",
+            afterWrite: options?.afterWrite ?? false,
+          },
           isLoading: false,
         }));
       }
@@ -155,7 +190,7 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
 
   async function runCommand(command: () => Promise<void>) {
     await command();
-    await loadCurrentTasks();
+    await loadCurrentTasks({ afterWrite: true });
   }
 
   function resetComposer() {
@@ -219,7 +254,8 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
       showCompleted,
       sort: mainViewSort,
     },
-    queryErrorMessage: queryState.errorMessage,
+    queryErrorMessage: queryState.error?.message,
+    refresh: () => loadCurrentTasks({ afterWrite: queryState.error?.afterWrite }),
     sections,
     setFilter,
     today,
@@ -310,20 +346,24 @@ function TaskSurfaceControls({
 
 function TaskComposer({
   draft,
+  saving,
   titleInputRef,
   onAdd,
   onCancel,
   onChange,
   onCreated,
+  onSavingChange,
 }: {
   draft: TaskDraftFields;
+  saving: boolean;
   titleInputRef?: React.RefObject<HTMLInputElement | null>;
   onAdd: (input: TaskDraftFields) => Promise<void>;
   onCancel: () => void;
   onChange: (draft: TaskDraftFields) => void;
   onCreated?: () => void;
+  onSavingChange: (saving: boolean) => void;
 }) {
-  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [showTitleRequired, setShowTitleRequired] = useState(false);
   const titleErrorId = "task-composer-title-error";
   const titleMissing = !draft.title.trim();
@@ -334,74 +374,84 @@ function TaskComposer({
       setShowTitleRequired(titleMissing);
       return;
     }
-    setSaving(true);
+    onSavingChange(true);
+    setSaveError(null);
     try {
       await onAdd(draft);
       onCreated?.();
+    } catch (error) {
+      setSaveError(taskActionError(error, "create"));
     } finally {
-      setSaving(false);
+      onSavingChange(false);
     }
   }
 
   return (
     <form className="task-form" onSubmit={submit}>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <fieldset className="task-form min-w-0" disabled={saving}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1.5">
+            <span className="text-xs font-bold text-ink-muted">Title</span>
+            <input
+              aria-describedby={showTitleRequired ? titleErrorId : undefined}
+              aria-invalid={showTitleRequired}
+              aria-label="Title"
+              className={fieldClass}
+              ref={titleInputRef}
+              placeholder="Task Title (required)"
+              value={draft.title}
+              onBlur={() => setShowTitleRequired(titleMissing)}
+              onChange={(event) => {
+                setShowTitleRequired(false);
+                onChange({ ...draft, title: event.target.value });
+              }}
+            />
+            <span
+              className="min-h-5 text-sm font-semibold text-danger"
+              id={titleErrorId}
+              role={showTitleRequired ? "alert" : undefined}
+            >
+              {showTitleRequired ? "Title is required." : null}
+            </span>
+          </label>
+          <label className="grid gap-1.5">
+            <span className="text-xs font-bold text-ink-muted">Due Date</span>
+            <input
+              aria-label="Due Date"
+              className={fieldClass}
+              type="date"
+              value={draft.dueDate}
+              onChange={(event) => onChange({ ...draft, dueDate: event.target.value })}
+            />
+            <span className="min-h-5" aria-hidden="true" />
+          </label>
+        </div>
         <label className="grid gap-1.5">
-          <span className="text-xs font-bold text-ink-muted">Title</span>
-          <input
-            aria-describedby={showTitleRequired ? titleErrorId : undefined}
-            aria-invalid={showTitleRequired}
-            aria-label="Title"
-            className={fieldClass}
-            ref={titleInputRef}
-            placeholder="Task Title (required)"
-            value={draft.title}
-            onBlur={() => setShowTitleRequired(titleMissing)}
-            onChange={(event) => {
-              setShowTitleRequired(false);
-              onChange({ ...draft, title: event.target.value });
-            }}
+          <span className="text-xs font-bold text-ink-muted">Note</span>
+          <textarea
+            aria-label="Note"
+            className={cx(fieldClass, "min-h-32 resize-y py-2")}
+            placeholder="Add useful context, constraints, links, reminders, or the next small step for this Task."
+            value={draft.note}
+            onChange={(event) => onChange({ ...draft, note: event.target.value })}
           />
-          <span
-            className="min-h-5 text-sm font-semibold text-danger"
-            id={titleErrorId}
-            role={showTitleRequired ? "alert" : undefined}
-          >
-            {showTitleRequired ? "Title is required." : null}
-          </span>
         </label>
-        <label className="grid gap-1.5">
-          <span className="text-xs font-bold text-ink-muted">Due Date</span>
-          <input
-            aria-label="Due Date"
-            className={fieldClass}
-            type="date"
-            value={draft.dueDate}
-            onChange={(event) => onChange({ ...draft, dueDate: event.target.value })}
-          />
-          <span className="min-h-5" aria-hidden="true" />
-        </label>
-      </div>
-      <label className="grid gap-1.5">
-        <span className="text-xs font-bold text-ink-muted">Note</span>
-        <textarea
-          aria-label="Note"
-          className={cx(fieldClass, "min-h-32 resize-y py-2")}
-          placeholder="Add useful context, constraints, links, reminders, or the next small step for this Task."
-          value={draft.note}
-          onChange={(event) => onChange({ ...draft, note: event.target.value })}
-        />
-      </label>
-      <div className="flex flex-wrap justify-end gap-2">
-        <button className={buttonClass(false)} onClick={onCancel} type="button">
-          <X size={16} />
-          Cancel
-        </button>
-        <button className={buttonClass(true)} disabled={saving} type="submit">
-          <Save size={16} />
-          Create
-        </button>
-      </div>
+        {saveError ? (
+          <p className="text-sm font-semibold text-danger" role="alert">
+            {saveError}
+          </p>
+        ) : null}
+        <div className="flex flex-wrap justify-end gap-2">
+          <button className={buttonClass(false)} onClick={onCancel} type="button">
+            <X size={16} />
+            Cancel
+          </button>
+          <button className={buttonClass(true)} disabled={saving} type="submit">
+            <Save size={16} />
+            {saving ? "Creating…" : "Create"}
+          </button>
+        </div>
+      </fieldset>
     </form>
   );
 }
@@ -425,9 +475,11 @@ function TaskComposerDialog({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const keepEditingButtonRef = useRef<HTMLButtonElement>(null);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const [saving, setSaving] = useState(false);
   const hasDraftContent = Boolean(draft.title.trim() || draft.note.trim() || draft.dueDate);
 
   function requestClose() {
+    if (saving) return;
     if (!hasDraftContent) {
       onClose();
       return;
@@ -481,6 +533,7 @@ function TaskComposerDialog({
           <button
             aria-label="Close Dialog"
             className={iconButton}
+            disabled={saving}
             onClick={requestClose}
             title="Close Dialog"
             type="button"
@@ -490,11 +543,13 @@ function TaskComposerDialog({
         </div>
         <TaskComposer
           draft={draft}
+          saving={saving}
           titleInputRef={titleInputRef}
           onAdd={onAdd}
           onCancel={requestClose}
           onChange={onChange}
           onCreated={onCreated}
+          onSavingChange={setSaving}
         />
         {confirmingDiscard ? (
           <div
@@ -521,7 +576,12 @@ function TaskComposerDialog({
               >
                 Keep Editing
               </button>
-              <button className={buttonClass(true)} type="button" onClick={onCancel}>
+              <button
+                className={buttonClass(true)}
+                disabled={saving}
+                type="button"
+                onClick={onCancel}
+              >
                 Discard Draft
               </button>
             </div>
@@ -536,7 +596,9 @@ function ConfirmationDialog({
   cancelLabel,
   confirmLabel,
   description,
+  errorMessage,
   open,
+  pending,
   title,
   onCancel,
   onConfirm,
@@ -544,7 +606,9 @@ function ConfirmationDialog({
   cancelLabel: string;
   confirmLabel: string;
   description: string;
+  errorMessage: string | null;
   open: boolean;
+  pending: boolean;
   title: string;
   onCancel: () => void;
   onConfirm: () => void;
@@ -592,17 +656,28 @@ function ConfirmationDialog({
         <p className="mt-2 text-sm leading-6 text-ink" id="confirmation-dialog-description">
           {description}
         </p>
+        {errorMessage ? (
+          <p className="mt-3 text-sm font-semibold text-danger" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
         <div className="mt-4 flex flex-wrap justify-end gap-2">
           <button
             className={buttonClass(false)}
+            disabled={pending}
             ref={cancelButtonRef}
             type="button"
             onClick={onCancel}
           >
             {cancelLabel}
           </button>
-          <button className={buttonClass(true)} type="button" onClick={onConfirm}>
-            {confirmLabel}
+          <button
+            className={buttonClass(true)}
+            disabled={pending}
+            type="button"
+            onClick={onConfirm}
+          >
+            {pending ? "Deleting…" : confirmLabel}
           </button>
         </div>
       </div>
@@ -751,6 +826,7 @@ function TaskRow({
   const [note, setNote] = useState(task.note ?? "");
   const [dueDate, setDueDate] = useState(task.dueDate ?? "");
   const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [showTitleRequired, setShowTitleRequired] = useState(false);
   const pastDue = isPastDue(task, today);
   const dueToday = isDueToday(task, today);
@@ -760,13 +836,31 @@ function TaskRow({
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (titleMissing || saving) {
-      setShowTitleRequired(true);
+      setShowTitleRequired(titleMissing);
       return;
     }
     setSaving(true);
+    setActionError(null);
     try {
       await onUpdate(task.id, { title, note, dueDate });
       setEditing(false);
+    } catch (error) {
+      setActionError(taskActionError(error, "save"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function move(nextState: TaskState) {
+    if (saving || editing) return;
+    setSaving(true);
+    setActionError(null);
+    try {
+      await onMove(task.id, nextState);
+    } catch (error) {
+      const action =
+        nextState === "Active" ? "restore" : nextState === "Completed" ? "complete" : "archive";
+      setActionError(taskActionError(error, action));
     } finally {
       setSaving(false);
     }
@@ -777,11 +871,15 @@ function TaskRow({
     setNote(task.note ?? "");
     setDueDate(task.dueDate ?? "");
     setShowTitleRequired(false);
+    setActionError(null);
     setEditing(false);
   }
 
   return (
-    <article className={cx("task-row", pastDue ? "bg-danger-soft" : "bg-surface")}>
+    <article
+      aria-busy={saving}
+      className={cx("task-row", pastDue ? "bg-danger-soft" : "bg-surface")}
+    >
       <button
         className={cx(
           taskCheckButton,
@@ -790,7 +888,8 @@ function TaskRow({
             : "border-accent bg-accent text-surface hover:bg-accent-hover",
         )}
         aria-label={task.taskState === "Active" ? "Complete Task" : "Restore Task"}
-        onClick={() => void onMove(task.id, task.taskState === "Active" ? "Completed" : "Active")}
+        disabled={saving || editing}
+        onClick={() => void move(task.taskState === "Active" ? "Completed" : "Active")}
         title={task.taskState === "Active" ? "Complete Task" : "Restore Task"}
       >
         {task.taskState === "Active" ? null : <Check size={22} strokeWidth={2.5} />}
@@ -798,62 +897,69 @@ function TaskRow({
       <div className={cx("task-row__content", editing && "task-row__content--editing")}>
         {editing ? (
           <form className="task-form" onSubmit={save}>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <fieldset className="task-form min-w-0" disabled={saving}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-bold text-ink-muted">Title</span>
+                  <input
+                    aria-describedby={showTitleRequired ? titleErrorId : undefined}
+                    aria-invalid={showTitleRequired}
+                    aria-label="Title"
+                    className={fieldClass}
+                    placeholder="Task Title (required)"
+                    value={title}
+                    onBlur={() => setShowTitleRequired(titleMissing)}
+                    onChange={(event) => {
+                      setShowTitleRequired(false);
+                      setTitle(event.target.value);
+                    }}
+                  />
+                  <span
+                    className="min-h-5 text-sm font-semibold text-danger"
+                    id={titleErrorId}
+                    role={showTitleRequired ? "alert" : undefined}
+                  >
+                    {showTitleRequired ? "Title is required." : null}
+                  </span>
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-bold text-ink-muted">Due Date</span>
+                  <input
+                    className={fieldClass}
+                    aria-label="Due Date"
+                    type="date"
+                    value={dueDate}
+                    onChange={(event) => setDueDate(event.target.value)}
+                  />
+                  <span className="min-h-5" aria-hidden="true" />
+                </label>
+              </div>
               <label className="grid gap-1.5">
-                <span className="text-xs font-bold text-ink-muted">Title</span>
-                <input
-                  aria-describedby={showTitleRequired ? titleErrorId : undefined}
-                  aria-invalid={showTitleRequired}
-                  aria-label="Title"
-                  className={fieldClass}
-                  placeholder="Task Title (required)"
-                  value={title}
-                  onBlur={() => setShowTitleRequired(titleMissing)}
-                  onChange={(event) => {
-                    setShowTitleRequired(false);
-                    setTitle(event.target.value);
-                  }}
+                <span className="text-xs font-bold text-ink-muted">Note</span>
+                <textarea
+                  className={cx(fieldClass, "min-h-24 resize-y py-2")}
+                  aria-label="Note"
+                  placeholder="Add useful context, constraints, links, reminders, or the next small step for this Task."
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
                 />
-                <span
-                  className="min-h-5 text-sm font-semibold text-danger"
-                  id={titleErrorId}
-                  role={showTitleRequired ? "alert" : undefined}
-                >
-                  {showTitleRequired ? "Title is required." : null}
-                </span>
               </label>
-              <label className="grid gap-1.5">
-                <span className="text-xs font-bold text-ink-muted">Due Date</span>
-                <input
-                  className={fieldClass}
-                  aria-label="Due Date"
-                  type="date"
-                  value={dueDate}
-                  onChange={(event) => setDueDate(event.target.value)}
-                />
-                <span className="min-h-5" aria-hidden="true" />
-              </label>
-            </div>
-            <label className="grid gap-1.5">
-              <span className="text-xs font-bold text-ink-muted">Note</span>
-              <textarea
-                className={cx(fieldClass, "min-h-24 resize-y py-2")}
-                aria-label="Note"
-                placeholder="Add useful context, constraints, links, reminders, or the next small step for this Task."
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-              />
-            </label>
-            <div className="flex flex-wrap justify-end gap-2">
-              <button className={buttonClass(false)} onClick={cancelEdit} type="button">
-                <X size={16} />
-                Cancel
-              </button>
-              <button className={buttonClass(true)} disabled={saving} type="submit">
-                <Save size={16} />
-                Save
-              </button>
-            </div>
+              {actionError ? (
+                <p className="text-sm font-semibold text-danger" role="alert">
+                  {actionError}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap justify-end gap-2">
+                <button className={buttonClass(false)} onClick={cancelEdit} type="button">
+                  <X size={16} />
+                  Cancel
+                </button>
+                <button className={buttonClass(true)} disabled={saving} type="submit">
+                  <Save size={16} />
+                  {saving ? "Saving…" : "Save"}
+                </button>
+              </div>
+            </fieldset>
           </form>
         ) : (
           <>
@@ -885,6 +991,11 @@ function TaskRow({
                 </div>
               </dl>
             ) : null}
+            {actionError ? (
+              <p className="mt-3 text-sm font-semibold text-danger" role="alert">
+                {actionError}
+              </p>
+            ) : null}
           </>
         )}
       </div>
@@ -894,7 +1005,11 @@ function TaskRow({
             <button
               aria-label="Edit Task"
               className={iconButton}
-              onClick={() => setEditing(true)}
+              disabled={saving}
+              onClick={() => {
+                setActionError(null);
+                setEditing(true);
+              }}
               title="Edit Task"
             >
               <Edit3 size={16} />
@@ -903,7 +1018,8 @@ function TaskRow({
               <button
                 aria-label="Restore Task"
                 className={iconButton}
-                onClick={() => void onMove(task.id, "Active")}
+                disabled={saving}
+                onClick={() => void move("Active")}
                 title="Restore Task"
               >
                 <RotateCcw size={16} />
@@ -912,7 +1028,8 @@ function TaskRow({
               <button
                 aria-label="Archive Task"
                 className={iconButton}
-                onClick={() => void onMove(task.id, "Archived")}
+                disabled={saving}
+                onClick={() => void move("Archived")}
                 title="Archive Task"
               >
                 <Archive size={16} />
@@ -921,6 +1038,7 @@ function TaskRow({
             <button
               aria-label="Delete Task"
               className={iconButton}
+              disabled={saving}
               onClick={() => onDelete(task)}
               title="Delete Task"
             >
