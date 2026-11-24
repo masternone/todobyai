@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "dev:tailscale": "node scripts/dev-tailscale.mjs",
     "build": "vite build",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
