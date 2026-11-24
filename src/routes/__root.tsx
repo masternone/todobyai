@@ -9,7 +9,13 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Todo by AI" },
+      {
+        name: "description",
+        content:
+          "Decide, organize, and complete the Tasks that matter with Todo by AI, a simple personal task app.",
+      },
     ],
+    links: [{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }],
   }),
   component: RootComponent,
   notFoundComponent: () => <Navigate to="/" replace />,

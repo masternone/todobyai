@@ -22,11 +22,11 @@ const filters: TaskFilter[] = ["All", "Past Due", "Due Today"];
 const sorts: TaskSort[] = ["Newest", "Oldest", "Recently Modified", "By Due Date"];
 const focusRing = "focus-ring";
 const buttonShape = `${focusRing} inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-semibold transition-colors duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-50`;
-const inactiveButton = "border-rule bg-surface text-ink hover:bg-app-canvas";
+const inactiveButton = "border-control-rule bg-surface text-ink hover:bg-app-canvas";
 const activeButton = "border-accent bg-accent text-surface hover:bg-accent-hover";
 const iconButton = `${buttonShape} ${inactiveButton} h-11 min-h-11 w-11 p-0`;
 const taskCheckButton = `${focusRing} inline-flex h-11 min-h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-md border transition-colors duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-50`;
-const fieldClass = `${focusRing} min-h-11 w-full rounded-md border border-rule bg-surface px-3 text-ink`;
+const fieldClass = `${focusRing} min-h-11 w-full rounded-md border border-control-rule bg-surface px-3 text-ink`;
 
 function cx(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(" ");
@@ -333,7 +333,7 @@ function TaskSurfaceControls({
           type="checkbox"
         />
         <span
-          className="pointer-events-none inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border border-rule bg-surface text-surface transition-colors duration-150 ease-out peer-checked:border-accent peer-checked:bg-accent peer-focus-visible:shadow-[0_0_0_4px_var(--color-accent-soft)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-hover"
+          className="pointer-events-none inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border border-control-rule bg-surface text-surface transition-colors duration-150 ease-out peer-checked:border-accent peer-checked:bg-accent peer-focus-visible:shadow-[0_0_0_4px_var(--color-accent-soft)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-hover"
           aria-hidden="true"
         >
           {workflow.mainView.showCompleted ? <Check size={14} strokeWidth={3} /> : null}
@@ -490,10 +490,18 @@ function TaskComposerDialog({
 
   useEffect(() => {
     const dialog = dialogRef.current;
+    const opener = document.activeElement;
     if (dialog && !dialog.open) {
       dialog.showModal();
     }
-    window.requestAnimationFrame(() => titleInputRef.current?.focus());
+    const focusRequest = window.requestAnimationFrame(() => titleInputRef.current?.focus());
+    return () => {
+      window.cancelAnimationFrame(focusRequest);
+      dialog?.close();
+      if (opener instanceof HTMLElement && opener.isConnected) {
+        opener.focus();
+      }
+    };
   }, []);
 
   useLayoutEffect(() => {
@@ -694,6 +702,7 @@ function SegmentedControl<T extends string>({
       <div className="flex flex-wrap items-center gap-2">
         {values.map((item) => (
           <button
+            aria-pressed={item === value}
             className={cx(buttonClass(item === value), "min-w-11")}
             key={item}
             onClick={() => onChange(item)}
@@ -781,7 +790,7 @@ function TaskListSkeleton() {
   return (
     <div className="mt-3 grid gap-2" aria-label="Loading Tasks">
       {[0, 1, 2].map((item) => (
-        <article className="task-row task-row--skeleton animate-pulse" key={item}>
+        <article className="task-row task-row--skeleton animate-pulse bg-surface" key={item}>
           <div className="h-11 w-11 shrink-0 rounded-md border border-rule-soft bg-app-canvas" />
           <div className="task-row__content pt-1">
             <div className="h-4 w-2/3 max-w-80 rounded bg-rule-soft" />
@@ -867,12 +876,15 @@ function TaskRow({
   }
 
   return (
-    <article aria-busy={saving} className={cx("task-row", pastDue && "bg-danger-soft")}>
+    <article
+      aria-busy={saving}
+      className={cx("task-row", pastDue ? "bg-danger-soft" : "bg-surface")}
+    >
       <button
         className={cx(
           taskCheckButton,
           task.taskState === "Active"
-            ? "border-rule bg-surface text-ink-muted hover:border-accent hover:bg-accent-soft"
+            ? "border-control-rule bg-surface text-ink-muted hover:border-accent hover:bg-accent-soft"
             : "border-accent bg-accent text-surface hover:bg-accent-hover",
         )}
         aria-label={task.taskState === "Active" ? "Complete Task" : "Restore Task"}
@@ -952,7 +964,9 @@ function TaskRow({
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="break-words font-semibold text-ink-strong">{task.title}</h3>
+              <h3 className="min-w-0 max-w-full text-balance font-semibold text-ink-strong [overflow-wrap:anywhere]">
+                {task.title}
+              </h3>
               {pastDue ? (
                 <span className="rounded-full border border-danger-rule bg-danger-soft px-2 py-0.5 text-xs font-bold text-danger">
                   Past Due
