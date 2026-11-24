@@ -1,16 +1,39 @@
 # Product
 
+<!-- impeccable:product-schema 1 -->
+
+## Platform
+
+web
+
 ## Register
 
 product
 
 ## Users
 
-This is a personal task app for Edward. The primary context is solo use: keeping tasks visible, moving them through active, completed, and archived states, and shaping the app through AI-assisted coding rather than manual product planning.
+Todo by AI is for individuals managing their own private Tasks. Each User owns their Tasks. Users do not share Task lists.
+
+The primary job is to capture intended work, review what needs attention, and move Tasks through Active, Completed, and Archived states.
 
 ## Product Purpose
 
-Todo by AI exists as both a usable todo app and a living exercise in prompting AI to write the code. Success means the app remains genuinely useful for everyday task capture and review while staying simple enough that new AI-generated changes can be understood, tested, and iterated without the interface turning into a dense command center.
+Todo by AI helps individuals decide, organize, and complete their intended work. It is also an exercise in building software through AI-assisted coding. Success means useful everyday Task capture and review, with changes that remain easy to understand, test, and iterate.
+
+## Operating context
+
+The public Splash Page provides sign-in and sign-up. Signed-in Users manage their private Tasks in Tasks and Archive. Clerk provides User identity and sessions, as recorded in `docs/adr/0002-use-clerk-for-user-identity.md`.
+
+## Capabilities and constraints
+
+- A Task has a required Title and optional Note and Due Date. Created Date and Modified Date are maintained by the app.
+- New Tasks are Active. Users can complete, reactivate, archive, and restore Tasks. Archived Tasks return to Active when restored.
+- Tasks shows Active Tasks and an optional Completed Section. Archive holds Archived Tasks separately.
+- Task Filters include All, Past Due, and Due Today. Task Sort options include Newest, Oldest, Recently Modified, and By Due Date. The Completed Section always uses Recently Modified.
+- Delete requires confirmation and permanently removes the Task from the User's accessible Tasks.
+- Only the owning User can view, modify, or delete a Task by default.
+
+Use the terminology and definitions in `CONTEXT.md` when naming product concepts. For web controls, preserve accessible native behavior and prefer progressive enhancement, as required by `AGENTS.md`.
 
 ## Brand Personality
 
