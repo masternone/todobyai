@@ -1,6 +1,7 @@
 .idea/
 node_modules/
 dist/
+.tanstack/
 .DS_Store
 todo-by-ai.db
 todo-by-ai-e2e.db

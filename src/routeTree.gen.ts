@@ -9,19 +9,19 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TaskRouteImport } from './routes/task'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TaskRouteImport } from './routes/task'
 import { Route as TaskIndexRouteImport } from './routes/task.index'
 import { Route as TaskArchiveRouteImport } from './routes/task.archive'
 
-const TaskRoute = TaskRouteImport.update({
-  id: '/task',
-  path: '/task',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TaskRoute = TaskRouteImport.update({
+  id: '/task',
+  path: '/task',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TaskIndexRoute = TaskIndexRouteImport.update({
@@ -68,18 +68,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/task': {
-      id: '/task'
-      path: '/task'
-      fullPath: '/task'
-      preLoaderRoute: typeof TaskRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/task': {
+      id: '/task'
+      path: '/task'
+      fullPath: '/task'
+      preLoaderRoute: typeof TaskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/task/': {
