@@ -1,22 +1,13 @@
-import {
-  ClerkProvider,
-  SignInButton,
-  SignOutButton,
-  SignUpButton,
-  useAuth as useClerkAuth,
-} from "@clerk/tanstack-react-start";
 import { Navigate, useLocation, useNavigate } from "@tanstack/react-router";
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { lazy, Suspense, useContext, useEffect, useMemo, useState } from "react";
+import { AuthContext, type AuthContextValue } from "./authContext";
 
-type AuthContextValue = {
-  isLoaded: boolean;
-  isSignedIn: boolean;
-  signIn: (redirectTo?: string) => void;
-  signUp: (redirectTo?: string) => void;
-  signOut: () => void;
-};
-
-const AuthContext = createContext<AuthContextValue | null>(null);
+const ClerkAuthProvider = lazy(() =>
+  import("./clerkAuth").then((module) => ({ default: module.ClerkAuthProvider })),
+);
+const ClerkAuthActionButton = lazy(() =>
+  import("./clerkAuth").then((module) => ({ default: module.ClerkAuthActionButton })),
+);
 const testUserStorageKey = "todo-by-ai-test-user";
 const defaultTestUserId = "test-user";
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -32,9 +23,9 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
   }
 
   return (
-    <ClerkProvider publishableKey={clerkPublishableKey}>
-      <ClerkAuthProvider>{children}</ClerkAuthProvider>
-    </ClerkProvider>
+    <Suspense fallback={<main className="mx-auto max-w-5xl p-6 md:p-10">Loading...</main>}>
+      <ClerkAuthProvider publishableKey={clerkPublishableKey}>{children}</ClerkAuthProvider>
+    </Suspense>
   );
 }
 
@@ -71,46 +62,26 @@ export function RedirectSignedInToTasks() {
   return null;
 }
 
+export type AuthActionButtonProps = Readonly<{
+  children: React.ReactNode;
+  intent: "sign-in" | "sign-up" | "sign-out";
+  redirectTo?: string;
+  className: string;
+}>;
+
 export function AuthActionButton({
   children,
   intent,
   redirectTo = "/task",
   className,
-}: Readonly<{
-  children: React.ReactNode;
-  intent: "sign-in" | "sign-up" | "sign-out";
-  redirectTo?: string;
-  className: string;
-}>) {
+}: AuthActionButtonProps) {
   const auth = useAppAuth();
 
   if (authMode !== "test" && clerkPublishableKey) {
-    if (intent === "sign-in") {
-      return (
-        <SignInButton fallbackRedirectUrl={redirectTo} mode="modal">
-          <button className={className} type="button">
-            {children}
-          </button>
-        </SignInButton>
-      );
-    }
-
-    if (intent === "sign-up") {
-      return (
-        <SignUpButton fallbackRedirectUrl={redirectTo} mode="modal">
-          <button className={className} type="button">
-            {children}
-          </button>
-        </SignUpButton>
-      );
-    }
-
     return (
-      <SignOutButton redirectUrl="/">
-        <button className={className} type="button">
-          {children}
-        </button>
-      </SignOutButton>
+      <ClerkAuthActionButton className={className} intent={intent} redirectTo={redirectTo}>
+        {children}
+      </ClerkAuthActionButton>
     );
   }
 
@@ -131,22 +102,6 @@ export function AuthActionButton({
       {children}
     </button>
   );
-}
-
-function ClerkAuthProvider({ children }: Readonly<{ children: React.ReactNode }>) {
-  const { isLoaded, isSignedIn } = useClerkAuth();
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      isLoaded,
-      isSignedIn: Boolean(isSignedIn),
-      signIn: () => undefined,
-      signUp: () => undefined,
-      signOut: () => undefined,
-    }),
-    [isLoaded, isSignedIn],
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 function TestAuthProvider({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -233,7 +188,7 @@ function SignInRequired({ returnTo }: Readonly<{ returnTo: string }>) {
             Sign in
           </AuthActionButton>
           <AuthActionButton
-            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-md border border-rule bg-surface px-4 text-sm font-semibold text-ink"
+            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-md border border-control-rule bg-surface px-4 text-sm font-semibold text-ink"
             intent="sign-up"
             redirectTo={returnTo}
           >

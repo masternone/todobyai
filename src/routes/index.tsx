@@ -26,7 +26,7 @@ function SplashPage() {
             Sign in
           </AuthActionButton>
           <AuthActionButton
-            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-md border border-rule bg-surface px-4 text-sm font-semibold text-ink"
+            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-md border border-control-rule bg-surface px-4 text-sm font-semibold text-ink"
             intent="sign-up"
           >
             Sign up

@@ -7,8 +7,9 @@
   --color-ink: oklch(27.9% 0.036 257);
   --color-ink-muted: oklch(50% 0.036 257);
   --color-rule: oklch(84.7% 0.023 251);
+  --color-control-rule: oklch(62% 0.023 251);
   --color-rule-soft: oklch(91.6% 0.015 251);
-  --color-accent: oklch(58.3% 0.115 183);
+  --color-accent: oklch(52% 0.102 183);
   --color-accent-hover: oklch(48.6% 0.096 183);
   --color-accent-soft: oklch(97.5% 0.025 181);
   --color-danger: oklch(50.5% 0.185 16);
@@ -54,7 +55,6 @@ body {
   align-items: start;
   border: 1px solid var(--color-rule);
   border-radius: 0.5rem;
-  background: var(--color-surface);
   padding: 0.75rem;
 }
 

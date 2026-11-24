@@ -8,8 +8,9 @@ colors:
   text: "#0f172a"
   text-muted: "#64748b"
   border: "#cbd5e1"
+  control-border: "oklch(62% 0.023 251)"
   border-soft: "#e2e8f0"
-  accent: "#0d9488"
+  accent: "oklch(52% 0.102 183)"
   accent-hover: "#0f766e"
   accent-soft: "#f0fdfa"
   danger-text: "#be123c"
@@ -112,7 +113,8 @@ The palette is a restrained slate work surface with a single teal signal color a
 - **Ink Strong**: Page titles, section titles, and task titles.
 - **Ink**: Default readable text.
 - **Quiet Ink**: Brand label, metadata, helper copy, empty states, and counts.
-- **Rule Line**: Primary borders on buttons, task rows, fields, and section dividers.
+- **Rule Line**: Decorative borders on task rows, dialogs, and section dividers.
+- **Control Rule Line**: Essential control boundaries on buttons, checkboxes, and fields. Keep at least 3:1 contrast against the adjacent surface.
 - **Soft Rule Line**: Skeleton borders and lower-emphasis placeholders.
 
 ### Tertiary
@@ -165,7 +167,7 @@ The system is flat by default and uses tonal layering, borders, and spacing befo
 - **Shape:** Gently squared product corners (6px radius).
 - **Primary:** Prompt Teal background with Paper Surface text, 40px minimum height, 12px horizontal padding, 1px border in the same teal.
 - **Hover / Focus:** Primary hover shifts to Prompt Teal Hover. Focus uses a visible 2px teal outline with 2px offset.
-- **Secondary / Icon:** Paper Surface background, Rule Line border, Ink text. Hover moves to the Workbench Canvas tone. Icon buttons are fixed 40px squares.
+- **Secondary / Icon:** Paper Surface background, Control Rule Line border, Ink text. Hover moves to the Workbench Canvas tone. Icon buttons are fixed 40px squares.
 
 ### Chips
 
@@ -182,7 +184,7 @@ The system is flat by default and uses tonal layering, borders, and spacing befo
 
 ### Inputs / Fields
 
-- **Style:** Paper Surface fill, Rule Line border, Ink text, 6px radius, 40px minimum height, 12px horizontal padding.
+- **Style:** Paper Surface fill, Control Rule Line border, Ink text, 6px radius, 40px minimum height, 12px horizontal padding.
 - **Focus:** 2px Prompt Teal outline with 2px offset. Do not rely on border color alone.
 - **Error / Disabled:** Disabled controls reduce opacity to 50% and use the standard not-allowed cursor. Error styling should use Overdue Rose text with Rose Wash only when a real validation error exists.
 
