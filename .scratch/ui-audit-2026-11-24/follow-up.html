@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Todo by AI audit follow-up</title>
+  <style>
+    body {
+      max-width: 76ch;
+      margin: 3rem auto;
+      padding: 0 1rem;
+      font:
+        16px/1.6 system-ui,
+        sans-serif;
+      color: #17212b;
+      background: #fff;
+    }
+    h1,
+    h2 {
+      line-height: 1.25;
+    }
+    h2 {
+      margin-top: 2rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    td,
+    th {
+      padding: 0.5rem;
+      text-align: left;
+      border-bottom: 1px solid #d5dce0;
+    }
+    code {
+      background: #f1f4f6;
+      padding: 0.1em 0.3em;
+    }
+    a {
+      color: #006c65;
+    }
+  </style>
+  <h1>Todo by AI audit follow-up</h1>
+  <p>
+    24 November 2026. Applied the hardening, optimization, documentation refresh, and polish passes
+    to the working tree based on commit <code>88700e7</code>. The original audit remains in
+    <a href="report.html">report.html</a>.
+  </p>
+  <h2>Result</h2>
+  <p>
+    Implementation integrity passes. Audit health is <strong>18/20, Excellent</strong>:
+    accessibility 3/4, performance 3/4, theming 4/4, responsive design 4/4, and implementation
+    integrity 4/4. This is a technical review score, not WCAG certification. Actual screen-reader
+    sessions and physical mobile devices remain untested.
+  </p>
+  <h2>Changes</h2>
+  <ul>
+    <li>
+      <strong>Local calendar dates.</strong> Task badges and date filters use the browser's local
+      date rather than UTC. The date updates at local midnight and when visibility/focus changes.
+      Scheduling the next midnight through local Date construction handles daylight-saving changes.
+      Server rendering defers browser-timezone-dependent badges until hydration.
+    </li>
+    <li>
+      <strong>Keyboard focus.</strong> Inline Edit focuses Title; Cancel and Save return focus to
+      Edit. Completing, archiving, or deleting a focused row chooses a surviving task control or a
+      heading. Native dialogs retain their existing protected focus and draft confirmation behavior.
+    </li>
+    <li>
+      <strong>Required titles.</strong> Create and Edit show “Title (required)” persistently, expose
+      native required semantics, and preserve trimmed-title validation and inline error messages.
+    </li>
+    <li>
+      <strong>Earlier task loading.</strong> Tasks and Archive load an owner-tagged initial snapshot
+      through their routes. The UI accepts it only for the signed-in identity and resets state when
+      identity changes. Signed-out requests cannot read task snapshots. Private task pages and
+      server-function responses use <code>Cache-Control: private, no-store</code>.
+    </li>
+    <li>
+      <strong>Stable refreshes.</strong> Refresh keeps existing rows and counts mounted while
+      exposing the busy state. Request ordering prevents older responses from overwriting newer
+      filter results. Commands refresh the latest selected query. Existing error, draft retention,
+      and retry behavior remains.
+    </li>
+    <li>
+      <strong>Polish and documentation.</strong> Placeholders use the muted-text token at full
+      opacity, correcting the measured approximately 3:1 contrast. Reduced-motion styling targets
+      the app's actual transitions and loading animation. DESIGN.md and its sidecar now match the
+      OKLCH palette, 44px controls, 46px select, responsive grid, and field/focus behavior. The
+      established visual language is preserved.
+    </li>
+  </ul>
+  <h2>Lighthouse and request measurements</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Page/profile</th>
+        <th>Performance</th>
+        <th>Accessibility</th>
+        <th>Best practices</th>
+        <th>SEO</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>splash-mobile · real Clerk</td>
+        <td>100</td>
+        <td>100</td>
+        <td>77</td>
+        <td>100</td>
+      </tr>
+      <tr>
+        <td>splash-desktop · real Clerk</td>
+        <td>100</td>
+        <td>100</td>
+        <td>77</td>
+        <td>100</td>
+      </tr>
+      <tr>
+        <td>tasks-mobile · test auth</td>
+        <td>92</td>
+        <td>96</td>
+        <td>100</td>
+        <td>100</td>
+      </tr>
+      <tr>
+        <td>tasks-desktop · test auth</td>
+        <td>100</td>
+        <td>96</td>
+        <td>100</td>
+        <td>100</td>
+      </tr>
+      <tr>
+        <td>archive-mobile · test auth</td>
+        <td>92</td>
+        <td>95</td>
+        <td>100</td>
+        <td>100</td>
+      </tr>
+      <tr>
+        <td>archive-desktop · test auth</td>
+        <td>100</td>
+        <td>95</td>
+        <td>100</td>
+        <td>100</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    The private-route client task reads after the document loads fell from one to zero on both Tasks
+    and Archive. Mobile LCP changed from approximately 3.35s to 3.30s in these single-run lab
+    samples. That small timing difference is not evidence of a meaningful speed improvement. The
+    measurable improvement is removing the follow-up request and preserving content during refresh.
+  </p>
+  <p>
+    Scores use Lighthouse 13.6.0 on local production builds served through the same uncompressed
+    loopback adapter as the baseline. Private pages use isolated test authentication. The splash
+    measurement with real Clerk uses the configured development instance. These are not
+    deployed-site or field results.
+  </p>
+  <h2>Validation</h2>
+  <p>
+    32 unit tests pass. All 29 browser tests pass, including the new local-midnight, required-field,
+    focus, row-removal, owner isolation, route snapshot, cache-header, and stable-refresh checks.
+    The original 28-test suite also passed against the production build; the added row-removal and
+    cache-header checks passed in the final source suite. Type checking, lint, formatting,
+    production build, and whitespace checks pass. The Impeccable source detector reported no
+    findings.
+  </p>
+  <p>
+    Rendered checks covered desktop task rows and a 320×568 composer. Browser inspection confirms
+    the required state and full-opacity placeholder color, with no horizontal overflow. Automated
+    reflow checks cover 320, 375, 768, and 1280px. Touch gestures, physical keyboards,
+    Safari/Firefox, actual assistive technology, and very large task collections were not exercised.
+  </p>
+  <h2>Remaining observations</h2>
+  <ul>
+    <li>
+      The native customizable select still receives Lighthouse's target-size warning because its
+      internal button overlaps the select. Its intended trigger remains 44px tall inside a 46px
+      control and keyboard selection works. The audit does not count this as a confirmed
+      undersized-target defect.
+    </li>
+    <li>
+      The real-Clerk splash best-practices deduction comes from third-party cookie/Chrome Issues
+      warnings on the development instance. Production domain/keys require a separate deployment
+      measurement. Credentials and hosting were not changed.
+    </li>
+    <li>
+      The local adapter has no static compression or asset cache headers, so mobile scores remain
+      constrained by that setup. The project does not identify a production hosting configuration to
+      tune. Actual authenticated Clerk-session performance remains unmeasured.
+    </li>
+  </ul>
+  <p>
+    Detailed Lighthouse reports and logs are under <code>/tmp/todobyai-run-all-audit/</code>.
+    Authentication query values in reports are redacted.
+  </p>
+</html>

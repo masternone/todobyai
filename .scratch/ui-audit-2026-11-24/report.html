@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Todo by AI technical UI audit</title>
+  <style>
+    body {
+      max-width: 76ch;
+      margin: 3rem auto;
+      padding: 0 1rem;
+      font:
+        16px/1.6 system-ui,
+        sans-serif;
+      color: #17212b;
+      background: #fff;
+    }
+    h1,
+    h2,
+    h3 {
+      line-height: 1.25;
+    }
+    h2 {
+      margin-top: 2rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    td,
+    th {
+      padding: 0.5rem;
+      text-align: left;
+      border-bottom: 1px solid #d5dce0;
+    }
+    code {
+      background: #f1f4f6;
+      padding: 0.1em 0.3em;
+    }
+    a {
+      color: #006c65;
+    }
+    small {
+      color: #4d5d68;
+    }
+  </style>
+  <h1>Todo by AI technical UI audit</h1>
+  <p>24 November 2026. Audited commit <code>88700e7</code>. No application code changed.</p>
+  <h2>Implementation integrity verdict: pass</h2>
+  <p>
+    The implementation expresses a coherent personal task tool. Shared teal/slate tokens, consistent
+    task controls, semantic headings, native dialogs, and a progressively enhanced native select
+    support the product's documented workflow. Impeccable found no source or rendered splash-page
+    detector findings. That result does not cover interaction correctness: the audit verified focus
+    and calendar-date defects below.
+  </p>
+  <h2>Executive summary</h2>
+  <p>
+    Audit health is <strong>17/20, Good</strong>. Five findings: zero P0, one P1, three P2, and one
+    P3. Fix local-day calculation first, then inline-edit focus and required-field semantics.
+    Investigate private-route content loading before adding performance complexity.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th>Score</th>
+        <th>Evidence</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Accessibility</td>
+        <td>3/4</td>
+        <td>
+          Contrast and composer focus pass; inline editing loses focus and title inputs lack
+          required semantics.
+        </td>
+      </tr>
+      <tr>
+        <td>Performance</td>
+        <td>3/4</td>
+        <td>
+          Desktop scores 100, zero blocking time and layout shift; private content waits for
+          hydration and a fetch.
+        </td>
+      </tr>
+      <tr>
+        <td>Theming</td>
+        <td>4/4</td>
+        <td>
+          Semantic color tokens are consistently used. Light-only styling follows the current
+          design; dark mode is not a stated requirement.
+        </td>
+      </tr>
+      <tr>
+        <td>Responsive design</td>
+        <td>4/4</td>
+        <td>
+          Long-title reflow passes at 320, 375, 768, and 1280px. App controls are at least 44px
+          tall. Composer and discard UI remain scrollable at 320×568.
+        </td>
+      </tr>
+      <tr>
+        <td>Implementation integrity</td>
+        <td>3/4</td>
+        <td>
+          Coherent components and no detector findings; UTC-day calculation and stale design
+          documentation need attention.
+        </td>
+      </tr>
+      <tr>
+        <th>Total</th>
+        <th>17/20</th>
+        <th>Good</th>
+      </tr>
+    </tbody>
+  </table>
+  <h2>Lighthouse results</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Page</th>
+        <th>Profile</th>
+        <th>Performance</th>
+        <th>Accessibility</th>
+        <th>Best practices</th>
+        <th>SEO</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Splash, real Clerk</td>
+        <td>Mobile</td>
+        <td>100</td>
+        <td>100</td>
+        <td>77</td>
+        <td>100</td>
+      </tr>
+      <tr>
+        <td>Splash, real Clerk</td>
+        <td>Desktop</td>
+        <td>100</td>
+        <td>100</td>
+        <td>77</td>
+        <td>100</td>
+      </tr>
+      <tr>
+        <td>Tasks, test auth</td>
+        <td>Mobile</td>
+        <td>92</td>
+        <td>96</td>
+        <td>100</td>
+        <td>100</td>
+      </tr>
+      <tr>
+        <td>Tasks, test auth</td>
+        <td>Desktop</td>
+        <td>100</td>
+        <td>96</td>
+        <td>100</td>
+        <td>100</td>
+      </tr>
+      <tr>
+        <td>Archive, test auth</td>
+        <td>Mobile</td>
+        <td>92</td>
+        <td>95</td>
+        <td>100</td>
+        <td>100</td>
+      </tr>
+      <tr>
+        <td>Archive, test auth</td>
+        <td>Desktop</td>
+        <td>100</td>
+        <td>95</td>
+        <td>100</td>
+        <td>100</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Lighthouse 13.6.0, one run per page/profile, using its default simulated mobile throttling and
+    desktop preset. Fresh production Vite builds ran through a temporary loopback Node HTTP adapter
+    on port 4373. The adapter serves uncompressed static assets without cache headers. These are
+    local lab results, not deployed-site or field measurements. Private routes use a temporary
+    SQLite database seeded with active, completed, overdue, due-today, and archived tasks. Test
+    authentication excludes Clerk downloads. Actual authenticated Clerk sessions were not measured.
+  </p>
+  <p>
+    Real Clerk uses the configured development instance. Its third-party cookie and Chrome Issues
+    warnings reduce best practices to 77. This is an environment/integration observation, not
+    evidence that sign-in fails. Validate again on the intended production Clerk domain and keys.
+    The test-auth splash scores 100 in all four categories.
+  </p>
+  <p>
+    Private-route mobile Largest Contentful Paint is 3.4s versus 0.7s on desktop. Total Blocking
+    Time is 0ms and Cumulative Layout Shift is 0 for both private routes. The uncompressed adapter
+    affects these numbers. Lighthouse estimates 142–144KiB of unused transferred JavaScript on
+    private routes and 249KiB on the real-auth splash. Those are coverage estimates for this
+    navigation, not proof that the code can be deleted.
+  </p>
+  <h2>Verified findings</h2>
+  <h3>P1. UTC changes the user's task day early</h3>
+  <p>
+    <strong>Location:</strong> <code>src/taskApp.tsx:8</code>.
+    <strong>Category:</strong> implementation integrity.
+  </p>
+  <p>
+    <code>new Date().toISOString().slice(0, 10)</code> supplies UTC to Due Today, Past Due, and task
+    badges. At 20:00 on November 24 in Detroit, the app supplies November 25. Today's tasks can
+    therefore appear overdue and tomorrow's tasks can appear due today. The calculation was verified
+    with the instant <code>2026-11-25T01:00:00Z</code>, which formats as November 24 in
+    America/Detroit. The shell also has no scheduled local-midnight refresh.
+  </p>
+  <p>
+    <strong>Recommendation:</strong> derive the calendar date in the user's timezone and refresh it
+    at local midnight or when the page becomes visible. Verify both sides of midnight in positive
+    and negative UTC offsets. No WCAG claim. Suggested command: <code>$impeccable harden</code>.
+  </p>
+  <h3>P2. Inline editing loses the keyboard's position</h3>
+  <p>
+    <strong>Location:</strong> <code>src/taskSurface.tsx:1009</code> and
+    <code>src/taskSurface.tsx:953</code>. <strong>Category:</strong> accessibility.
+  </p>
+  <p>
+    Clicking Edit removes its button and renders the form without moving focus to Title. Browser
+    inspection confirmed <code>document.activeElement === document.body</code>. The next Tab skipped
+    the new form and landed on the next task's Complete Task button. Cancel also left focus on the
+    body. Keyboard users must navigate backward to find the form.
+  </p>
+  <p>
+    <strong>Recommendation:</strong> focus Title when editing starts, then restore focus to that
+    row's Edit button on cancel/save. Choose a predictable surviving target after row removal.
+    Relevant standard: WCAG 2.4.3, Focus Order. Suggested command: <code>$impeccable harden</code>.
+  </p>
+  <h3>P2. Required titles are not exposed as required controls</h3>
+  <p>
+    <strong>Location:</strong> <code>src/taskSurface.tsx:395</code> and
+    <code>src/taskSurface.tsx:903</code>. <strong>Category:</strong> accessibility.
+  </p>
+  <p>
+    Create and Edit title inputs have neither <code>required</code> nor <code>aria-required</code>.
+    The visible label is only “Title”; the required instruction lives in placeholder text and an
+    error after validation. Browser inspection confirms the create input's required property is
+    false.
+  </p>
+  <p>
+    <strong>Recommendation:</strong> expose required status programmatically and keep a persistent
+    visible instruction. Preserve the existing trimmed-title check and linked inline error. Relevant
+    guidance: WCAG 3.3.2, Labels or Instructions. This is a semantics gap; no screen-reader session
+    was run to assert a specific announcement failure. Suggested command:
+    <code>$impeccable harden</code>.
+  </p>
+  <h3>P2. Private task content starts after hydration and another request</h3>
+  <p>
+    <strong>Location:</strong> <code>src/taskSurface.tsx:136</code>,
+    <code>src/taskSurface.tsx:149</code>, and <code>src/taskSurface.tsx:186</code>.
+    <strong>Category:</strong> performance.
+  </p>
+  <p>
+    Query state starts loading and the client effect initiates task retrieval. The initial private
+    route cannot render task data until JavaScript, test identity loading, and the task request
+    finish. Mobile lab LCP is 3.4s with uncompressed serving, while desktop is 0.7s. The same
+    loading path also replaces existing rows with skeletons during refresh.
+  </p>
+  <p>
+    <strong>Recommendation:</strong> first measure with the intended hosting compression and real
+    authenticated sessions. If the delay persists, investigate authenticated route loading or
+    prefetching and retain existing rows during refresh. Preserve per-user ownership and avoid
+    speculative memoization. No WCAG claim. Suggested command: <code>$impeccable optimize</code>.
+  </p>
+  <h3>P3. The design reference is behind the implementation</h3>
+  <p>
+    <strong>Location:</strong> <code>DESIGN.md</code>, <code>.impeccable/design.json</code>,
+    <code>src/styles.css:5</code>, and <code>src/taskSurface.tsx:25</code>.
+    <strong>Category:</strong> implementation integrity/theming documentation.
+  </p>
+  <p>
+    The design reference specifies 40px controls and pure-white surfaces. The running app uses 44px
+    controls and a slightly tinted OKLCH surface. The runtime choices are consistent and accessible,
+    but future work following the reference could reintroduce obsolete sizing or colors.
+  </p>
+  <p>
+    <strong>Recommendation:</strong> document the current tokens and component dimensions when
+    design documentation upkeep is requested. Do not change the working 44px controls to match stale
+    text. Suggested command: <code>$impeccable document</code>. No documentation drift was repaired
+    in this audit.
+  </p>
+  <h2>Scanner findings that are not confirmed application defects</h2>
+  <ul>
+    <li>
+      Lighthouse's sole accessibility failure on Tasks and Archive is the enhanced native select.
+      Axe reports the select obscured by its own internal button. The rendered select is 46px tall;
+      its intended trigger is 44px tall. Clicking it and using Arrow Down/Enter successfully
+      selected Oldest. This appears to be a customizable-select scanner false positive, not a 1px
+      usable target. Preserve the native baseline and verify on supported browsers rather than
+      shrinking or replacing it to chase a score. A physical touch device was not tested.
+    </li>
+    <li>
+      The back/forward-cache warning reports <code>CacheLimitPrunedOnCriticalMemoryPressure</code>,
+      marked “Not actionable.” It is not counted as an app bug.
+    </li>
+    <li>
+      Missing compression/cache headers reflect the temporary adapter, not a verified deployment
+      configuration.
+    </li>
+    <li>
+      The global reduced-motion rule uses 0.01ms durations. The current UI retains static loading
+      shapes and state changes; no lost task feedback or motion blocker was demonstrated. Prefer
+      targeted alternatives for future animations.
+    </li>
+  </ul>
+  <h2>Patterns and positive findings</h2>
+  <p>
+    Focus management is strong in the composer but absent from inline editing. Required-title
+    semantics are missing in both create and edit forms. The private routes share a hydration-first
+    data path. Design documentation has drifted from the code.
+  </p>
+  <p>
+    All seven existing UI audit tests pass against the production build. They cover keyboard filter
+    selection, composer focus return after cancel/Escape/close/discard/create, long-title reflow in
+    active/completed/archive/delete views, overdue state styling, action/control contrast,
+    metadata/favicon, and Clerk code exclusion in test mode. App controls measure at least 44px
+    tall. The select retains native semantics, dialogs use the platform modal API, error messages
+    use alerts, filters expose pressed state, and active navigation exposes the current page.
+  </p>
+  <h2>Recommended actions</h2>
+  <ol>
+    <li>
+      <code>$impeccable harden</code> for local-calendar dates, edit focus, and required-field
+      semantics.
+    </li>
+    <li>
+      <code>$impeccable optimize</code> for authenticated content loading after checking the
+      intended hosting configuration.
+    </li>
+    <li><code>$impeccable document</code> if updating the design reference is desired.</li>
+    <li>
+      <code>$impeccable polish</code> after the fixes, then rerun <code>$impeccable audit</code>.
+    </li>
+  </ol>
+  <p>
+    You can ask me to run these one at a time, all at once, or in any order you prefer. Re-run
+    <code>$impeccable audit</code> after fixes to see your score improve.
+  </p>
+  <h2>Scope and evidence</h2>
+  <p>
+    Rendered Chromium inspections covered splash, Tasks, composer/discard, inline edit, and real
+    Clerk sign-in. The real sign-in modal opened at 390×844 without submitting credentials.
+    Long-content automated checks covered 320, 375, 768, and 1280px. These are emulated viewport and
+    keyboard checks, not physical-device or assistive-technology certification. Safari/Firefox,
+    actual mobile keyboards, synthesized touch gestures, very large task lists, and deployed hosting
+    were not tested.
+  </p>
+  <p>
+    Raw Lighthouse JSON/HTML, run scripts, and the E2E log are in
+    <code>/tmp/todobyai-current-audit/</code>. Real-auth reports are in its
+    <code>clerk/</code> directory. Report authentication query values have been redacted.
+  </p>
+</html>

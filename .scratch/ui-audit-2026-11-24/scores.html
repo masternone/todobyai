@@ -1,0 +1,41 @@
+<section id="lighthouse-audit-scores" data-viz-composition>
+  <div data-viz-container></div>
+  <script type="application/json" data-viz-chart>
+    {
+      "id": "lighthouse-audit-scores",
+      "title": "Lighthouse scores",
+      "description": "Local production builds, Lighthouse 13.6.0. Splash uses real Clerk development authentication. Tasks and Archive use isolated test authentication. Static assets are uncompressed in the local adapter. One run per profile.",
+      "height": 650,
+      "spec": {
+        "type": "horizontalBar",
+        "y": "Route / category",
+        "x": ["Mobile", "Desktop"],
+        "xLabel": "Score out of 100",
+        "xDomain": [0, 100],
+        "showLegend": true,
+        "showValues": true
+      },
+      "columns": ["Route / category", "Mobile", "Desktop"],
+      "rows": [
+        ["Splash · performance", 100, 100],
+        ["Splash · accessibility", 100, 100],
+        ["Splash · best practices", 77, 77],
+        ["Splash · SEO", 100, 100],
+        ["Tasks · performance", 92, 100],
+        ["Tasks · accessibility", 96, 96],
+        ["Tasks · best practices", 100, 100],
+        ["Tasks · SEO", 100, 100],
+        ["Archive · performance", 92, 100],
+        ["Archive · accessibility", 95, 95],
+        ["Archive · best practices", 100, 100],
+        ["Archive · SEO", 100, 100]
+      ]
+    }
+  </script>
+</section>
+<script type="module">
+  import { mountChart } from "https://persistent.oaistatic.com/plugins/visualize/charts/1.2.3/element.js";
+  const root = document.getElementById("lighthouse-audit-scores");
+  const config = JSON.parse(root.querySelector("[data-viz-chart]").textContent);
+  mountChart(root.querySelector("[data-viz-container]"), config);
+</script>

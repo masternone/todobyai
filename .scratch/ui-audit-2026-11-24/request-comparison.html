@@ -1,0 +1,34 @@
+<section id="task-read-comparison" data-viz-composition>
+  <div data-viz-container></div>
+  <script type="application/json" data-viz-chart>
+    {
+      "id": "task-read-comparison",
+      "title": "Task reads after the document loads",
+      "description": "Local Lighthouse mobile runs with isolated test authentication. Route snapshots eliminate the follow-up server-function request. This does not measure a deployed Clerk session.",
+      "height": 240,
+      "spec": {
+        "type": "horizontalBar",
+        "y": "Route",
+        "x": ["Before", "After"],
+        "xLabel": "Additional task requests",
+        "xDomain": [0, 1],
+        "showLegend": true,
+        "showValues": true,
+        "valueDecimals": 0
+      },
+      "columns": ["Route", "Before", "After"],
+      "rows": [
+        ["Tasks", 1, 0],
+        ["Archive", 1, 0]
+      ]
+    }
+  </script>
+</section>
+<script type="module">
+  import { mountChart } from "https://persistent.oaistatic.com/plugins/visualize/charts/1.2.3/element.js";
+  const root = document.getElementById("task-read-comparison");
+  mountChart(
+    root.querySelector("[data-viz-container]"),
+    JSON.parse(root.querySelector("[data-viz-chart]").textContent),
+  );
+</script>

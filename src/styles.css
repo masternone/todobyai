@@ -22,6 +22,12 @@ body {
   @apply bg-app-canvas text-ink;
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-ink-muted);
+  opacity: 1;
+}
+
 .focus-ring {
   outline: 2px solid transparent;
   outline-offset: 2px;
@@ -213,12 +219,17 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+  html {
     scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
+  }
+
+  .task-row--skeleton {
+    animation: none;
+  }
+
+  .focus-ring,
+  .peer + span,
+  .task-sort-select__control--custom::picker-icon {
+    transition: none;
   }
 }

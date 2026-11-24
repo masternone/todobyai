@@ -568,6 +568,7 @@ async function restoreTask(page: Page, title: string, options: { leavesCurrentVi
 async function deleteCreatedTasks(page: Page, taskTitles: string[]) {
   for (const view of ["Tasks", "Archive"]) {
     await page.getByRole("link", { name: view }).click();
+    await expect(page.getByRole("heading", { name: view, level: 1, exact: true })).toBeVisible();
     for (const title of taskTitles) {
       const row = taskRow(page, title);
       if (await row.isVisible()) {
