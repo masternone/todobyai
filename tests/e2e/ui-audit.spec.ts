@@ -107,6 +107,10 @@ test("audit: long titles reflow in active, completed, archived, and delete views
     for (const width of [320, 375, 768, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await expect(row.getByRole("heading", { name: title })).toBeVisible();
+      await expect(row.getByRole("heading", { name: title })).toHaveCSS(
+        "text-wrap-style",
+        "balance",
+      );
       await expect
         .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
         .toBeLessThanOrEqual(width);

@@ -858,7 +858,7 @@ function TaskRow({
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="min-w-0 max-w-full font-semibold text-ink-strong [overflow-wrap:anywhere]">
+              <h3 className="min-w-0 max-w-full text-balance font-semibold text-ink-strong [overflow-wrap:anywhere]">
                 {task.title}
               </h3>
               {pastDue ? (
