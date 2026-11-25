@@ -23,14 +23,21 @@ async function createTask(page: Page, title: string, dueDate = "") {
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
 }
 
-async function contrastRatio(element: Locator, foreground: "color" | "borderTopColor") {
+async function contrastRatio(
+  element: Locator,
+  foreground: "color" | "borderTopColor" | "placeholder",
+) {
   return element.evaluate((target, property) => {
     const canvas = document.createElement("canvas");
     canvas.width = 1;
     canvas.height = 1;
     const context = canvas.getContext("2d")!;
-    const luminance = (color: string) => {
+    const luminance = (color: string, background?: string) => {
       context.clearRect(0, 0, 1, 1);
+      if (background) {
+        context.fillStyle = background;
+        context.fillRect(0, 0, 1, 1);
+      }
       context.fillStyle = color;
       context.fillRect(0, 0, 1, 1);
       const channels = Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3);
@@ -41,11 +48,106 @@ async function contrastRatio(element: Locator, foreground: "color" | "borderTopC
       return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
     };
     const style = getComputedStyle(target);
-    const first = luminance(style[property]);
+    const color =
+      property === "placeholder"
+        ? getComputedStyle(target, "::placeholder").color
+        : style[property];
+    const first = luminance(color, style.backgroundColor);
     const second = luminance(style.backgroundColor);
     return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
   }, foreground);
 }
+
+test("audit: inline edit focuses the title and returns focus after cancel and save", async ({
+  page,
+}) => {
+  await openTasks(page, `audit-inline-focus-${Date.now()}`);
+  const row = await createTask(page, "Edit with the keyboard");
+  const edit = row.getByRole("button", { name: "Edit Task", exact: true });
+  await edit.focus();
+  await edit.press("Enter");
+  const editor = page.locator("article").filter({ has: page.locator("form") });
+  const title = editor.getByRole("textbox", { name: "Title", exact: true });
+  await expect(title).toBeFocused();
+  await expect(title).toHaveAttribute("required", "");
+  await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(edit).toBeFocused();
+  await edit.press("Enter");
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(edit).toBeFocused();
+});
+
+test("audit: route snapshots avoid a second task request and stay private", async ({
+  page,
+  request,
+}) => {
+  await openTasks(page, `audit-snapshot-${Date.now()}`);
+  const title = `Private snapshot ${Date.now()}`;
+  await createTask(page, title);
+  const signedOut = await request.get("/task");
+  expect(signedOut.headers()["cache-control"]).toContain("no-store");
+  expect(await signedOut.text()).not.toContain(title);
+  const taskReads: string[] = [];
+  page.on("request", (req) => {
+    if (req.method() === "GET" && req.url().includes("/_serverFn/")) taskReads.push(req.url());
+  });
+  const navigation = await page.reload();
+  expect(navigation?.headers()["cache-control"]).toContain("no-store");
+  await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
+  expect(taskReads).toEqual([]);
+});
+
+test("audit: removing a focused row chooses a surviving control", async ({ page }) => {
+  await openTasks(page, `audit-row-removal-${Date.now()}`);
+  const remaining = await createTask(page, "Keep this task");
+  const completing = await createTask(page, "Complete this task");
+  const complete = completing.getByRole("button", { name: "Complete Task", exact: true });
+  await complete.focus();
+  await complete.press("Enter");
+  await expect(remaining.getByRole("button", { name: "Complete Task", exact: true })).toBeFocused();
+  await remaining.getByRole("button", { name: "Delete Task", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete Task", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Tasks", level: 1, exact: true })).toBeFocused();
+});
+
+test("audit: refresh keeps rows and focus mounted", async ({ page }) => {
+  await openTasks(page, `audit-refresh-${Date.now()}`);
+  const row = await createTask(page, "Keep this row visible");
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/_serverFn/**", async (route) => {
+    if (route.request().method() === "GET") await held;
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "Past Due", exact: true }).click();
+  await expect(row).toBeVisible();
+  await expect(page.getByLabel("Loading Tasks")).toBeHidden();
+  await expect(page.locator('section[aria-busy="true"]')).toHaveCount(1);
+  release();
+  await expect(row).toBeHidden();
+  await page.unrouteAll({ behavior: "wait" });
+});
+
+test.describe("local midnight", () => {
+  test.use({ timezoneId: "America/Detroit" });
+  test("audit: due-today badges and filters follow local midnight", async ({ page }) => {
+    const beforeMidnight = new Date("2026-11-25T04:59:59Z");
+    await page.clock.install({ time: beforeMidnight });
+    await page.clock.pauseAt(beforeMidnight);
+    await openTasks(page, `audit-midnight-${Date.now()}`);
+    const today = await createTask(page, "Due before midnight", "2026-11-24");
+    const tomorrow = await createTask(page, "Due after midnight", "2026-11-25");
+    await expect(today.getByText("Due Today", { exact: true })).toBeVisible();
+    await expect(tomorrow.getByText("Due Today", { exact: true })).toBeHidden();
+    await page.getByRole("button", { name: "Due Today", exact: true }).click();
+    await expect(tomorrow).toBeHidden();
+    await page.clock.fastForward(2000);
+    await expect(today).toBeHidden();
+    await expect(tomorrow.getByText("Due Today", { exact: true })).toBeVisible();
+  });
+});
 
 test("audit: filters expose their selected state to assistive technology", async ({
   page,
@@ -181,6 +283,13 @@ test("audit: action text and essential control boundaries have sufficient contra
     .getByRole("dialog", { name: "Add Task" })
     .getByRole("textbox", { name: "Title", exact: true });
   expect(await contrastRatio(title, "borderTopColor")).toBeGreaterThanOrEqual(3);
+  expect(await contrastRatio(title, "placeholder")).toBeGreaterThanOrEqual(4.5);
+  expect(
+    await contrastRatio(
+      page.getByRole("dialog", { name: "Add Task" }).getByLabel("Note"),
+      "placeholder",
+    ),
+  ).toBeGreaterThanOrEqual(4.5);
 });
 
 test("audit: public page declares a description and a working favicon", async ({

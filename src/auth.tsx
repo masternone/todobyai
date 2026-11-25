@@ -106,36 +106,37 @@ export function AuthActionButton({
 
 function TestAuthProvider({ children }: Readonly<{ children: React.ReactNode }>) {
   const navigate = useNavigate();
-  const [isSignedIn, setIsSignedIn] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    setIsSignedIn(Boolean(window.localStorage.getItem(testUserStorageKey)));
+    setUserId(window.localStorage.getItem(testUserStorageKey));
     setIsLoaded(true);
   }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       isLoaded,
-      isSignedIn,
+      isSignedIn: Boolean(userId),
+      userId,
       signIn: (redirectTo = "/task") => {
         setTestUserIdentity(window.localStorage.getItem(testUserStorageKey) ?? defaultTestUserId);
-        setIsSignedIn(true);
+        setUserId(window.localStorage.getItem(testUserStorageKey));
         window.location.href = redirectTo;
       },
       signUp: (redirectTo = "/task") => {
         setTestUserIdentity(window.localStorage.getItem(testUserStorageKey) ?? defaultTestUserId);
-        setIsSignedIn(true);
+        setUserId(window.localStorage.getItem(testUserStorageKey));
         window.location.href = redirectTo;
       },
       signOut: () => {
         window.localStorage.removeItem(testUserStorageKey);
         clearTestUserIdentity();
-        setIsSignedIn(false);
+        setUserId(null);
         void navigate({ to: "/" });
       },
     }),
-    [isLoaded, isSignedIn, navigate],
+    [isLoaded, userId, navigate],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -155,6 +156,7 @@ function MissingAuthProvider({ children }: Readonly<{ children: React.ReactNode 
     () => ({
       isLoaded: true,
       isSignedIn: false,
+      userId: null,
       signIn: () => undefined,
       signUp: () => undefined,
       signOut: () => undefined,

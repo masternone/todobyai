@@ -10,7 +10,8 @@ import {
   type TaskSort,
   type TaskState,
 } from "./domain/task";
-import { type TaskDraftFields, useTaskAppState } from "./taskAppState";
+import { type TaskDraftFields, type TaskViewSnapshot, useTaskAppState } from "./taskAppState";
+import { useAppAuth } from "./auth";
 import { taskActionError } from "./taskActionError";
 
 type TaskSurfaceView = "Tasks" | "Archive";
@@ -36,11 +37,33 @@ function buttonClass(active = false): string {
   return cx(buttonShape, active ? activeButton : inactiveButton);
 }
 
-export function TaskSurface({ view }: { view: TaskSurfaceView }) {
-  const workflow = useTaskSurfaceWorkflow(view);
+export function TaskSurface(props: {
+  view: TaskSurfaceView;
+  initialTasks: TaskViewSnapshot | null;
+}) {
+  const { userId } = useAppAuth();
+  return (
+    <TaskSurfaceForUser
+      key={userId}
+      view={props.view}
+      initialTasks={props.initialTasks?.ownerUserId === userId ? props.initialTasks : null}
+    />
+  );
+}
+
+function TaskSurfaceForUser({
+  view,
+  initialTasks,
+}: {
+  view: TaskSurfaceView;
+  initialTasks: TaskViewSnapshot | null;
+}) {
+  const workflow = useTaskSurfaceWorkflow(view, initialTasks);
   const [deleteConfirmation, setDeleteConfirmation] = useState<DeleteConfirmation>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const deleteReturnFocusRef = useRef<HTMLElement | null>(null);
 
   async function confirmDelete() {
     if (!deleteConfirmation || deleting) {
@@ -53,6 +76,10 @@ export function TaskSurface({ view }: { view: TaskSurfaceView }) {
     try {
       await workflow.actions.deleteTask(taskId);
       setDeleteConfirmation(null);
+      window.requestAnimationFrame(() => {
+        const target = deleteReturnFocusRef.current;
+        (target?.isConnected ? target : headingRef.current)?.focus();
+      });
     } catch (error) {
       setDeleteError(taskActionError(error, "delete"));
     } finally {
@@ -62,7 +89,7 @@ export function TaskSurface({ view }: { view: TaskSurfaceView }) {
 
   return (
     <>
-      <TaskSurfaceHeader title={view} />
+      <TaskSurfaceHeader title={view} headingRef={headingRef} />
       {workflow.composer.open ? (
         <TaskComposerDialog
           draft={workflow.composer.draft}
@@ -93,11 +120,15 @@ export function TaskSurface({ view }: { view: TaskSurfaceView }) {
         <TaskList
           emptyText={section.emptyText}
           isLoading={workflow.isLoading}
+          hasLoaded={workflow.hasLoaded}
           key={section.title}
           tasks={section.tasks}
           title={section.title}
           today={workflow.today}
           onDelete={(task) => {
+            const row = document.activeElement?.closest("article");
+            const neighbor = row?.nextElementSibling ?? row?.previousElementSibling;
+            deleteReturnFocusRef.current = neighbor?.querySelector("button:not(:disabled)") ?? null;
             setDeleteError(null);
             setDeleteConfirmation({ id: task.id, title: task.title });
           }}
@@ -122,7 +153,7 @@ export function TaskSurface({ view }: { view: TaskSurfaceView }) {
   );
 }
 
-function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
+function useTaskSurfaceWorkflow(view: TaskSurfaceView, initialTasks: TaskViewSnapshot | null) {
   const { addTask, deleteTask, listArchivedTasks, listMainViewTasks, moveTask, today, updateTask } =
     useTaskAppState();
   const [filter, setFilter] = useState<TaskFilter>("All");
@@ -135,21 +166,28 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
     archivedTasks: Task[];
     error: { message: string; afterWrite: boolean } | null;
     isLoading: boolean;
+    hasLoaded: boolean;
     mainView: MainViewTasks;
   }>({
-    archivedTasks: [],
+    archivedTasks: initialTasks?.archivedTasks ?? [],
     error: null,
-    isLoading: true,
-    mainView: { activeTasks: [], completedTasks: [] },
+    isLoading: !initialTasks,
+    hasLoaded: Boolean(initialTasks),
+    mainView: initialTasks?.mainView ?? { activeTasks: [], completedTasks: [] },
   });
+  const requestVersion = useRef(0);
+  const queryToday = filter === "All" ? "" : today;
+  const queryKey = `${view}:${filter}:${mainViewSort}:${archivedViewSort}:${queryToday}`;
+  const initialQueryKey = useRef(initialTasks ? queryKey : null);
 
   async function loadCurrentTasks(options?: { cancelled?: () => boolean; afterWrite?: boolean }) {
+    const version = ++requestVersion.current;
     setQueryState((current) => ({ ...current, isLoading: true }));
     try {
       const next =
         view === "Tasks"
           ? {
-              mainView: await listMainViewTasks({ filter, sort: mainViewSort, today }),
+              mainView: await listMainViewTasks({ filter, sort: mainViewSort, today: queryToday }),
               archivedTasks: [],
             }
           : {
@@ -157,15 +195,16 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
               mainView: { activeTasks: [], completedTasks: [] },
             };
 
-      if (!options?.cancelled?.()) {
+      if (version === requestVersion.current && !options?.cancelled?.()) {
         setQueryState({
           ...next,
           error: null,
           isLoading: false,
+          hasLoaded: true,
         });
       }
     } catch {
-      if (!options?.cancelled?.()) {
+      if (version === requestVersion.current && !options?.cancelled?.()) {
         setQueryState((current) => ({
           ...current,
           error: {
@@ -181,16 +220,33 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
   }
 
   useEffect(() => {
+    if (initialQueryKey.current === queryKey) return;
+    initialQueryKey.current = null;
     let cancelled = false;
     void loadCurrentTasks({ cancelled: () => cancelled });
     return () => {
       cancelled = true;
+      requestVersion.current += 1;
     };
-  }, [archivedViewSort, filter, listArchivedTasks, listMainViewTasks, mainViewSort, today, view]);
+  }, [
+    archivedViewSort,
+    filter,
+    listArchivedTasks,
+    listMainViewTasks,
+    mainViewSort,
+    queryToday,
+    queryKey,
+    view,
+  ]);
+
+  const refreshRef = useRef(loadCurrentTasks);
+  useLayoutEffect(() => {
+    refreshRef.current = loadCurrentTasks;
+  });
 
   async function runCommand(command: () => Promise<void>) {
     await command();
-    await loadCurrentTasks({ afterWrite: true });
+    await refreshRef.current({ afterWrite: true });
   }
 
   function resetComposer() {
@@ -248,6 +304,7 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
     },
     filter,
     isLoading: queryState.isLoading,
+    hasLoaded: queryState.hasLoaded,
     mainView: {
       setShowCompleted,
       setSort: setMainViewSort,
@@ -263,14 +320,24 @@ function useTaskSurfaceWorkflow(view: TaskSurfaceView) {
   };
 }
 
-function TaskSurfaceHeader({ title }: { title: string }) {
+function TaskSurfaceHeader({
+  title,
+  headingRef,
+}: {
+  title: string;
+  headingRef: React.RefObject<HTMLHeadingElement | null>;
+}) {
   const pathname = useLocation({ select: (location) => location.pathname });
 
   return (
     <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div>
         <p className="mb-1 text-xs font-bold text-ink-muted">Todo by AI</p>
-        <h1 className="text-3xl font-bold leading-tight tracking-normal text-ink-strong">
+        <h1
+          className="focus-ring text-3xl font-bold leading-tight tracking-normal text-ink-strong"
+          ref={headingRef}
+          tabIndex={-1}
+        >
           {title}
         </h1>
       </div>
@@ -391,13 +458,15 @@ function TaskComposer({
       <fieldset className="task-form min-w-0" disabled={saving}>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1.5">
-            <span className="text-xs font-bold text-ink-muted">Title</span>
+            <span className="text-xs font-bold text-ink-muted">Title (required)</span>
             <input
               aria-describedby={showTitleRequired ? titleErrorId : undefined}
               aria-invalid={showTitleRequired}
               aria-label="Title"
               className={fieldClass}
               ref={titleInputRef}
+              required
+              onInvalid={() => setShowTitleRequired(true)}
               placeholder="Task Title (required)"
               value={draft.title}
               onBlur={() => setShowTitleRequired(titleMissing)}
@@ -748,6 +817,7 @@ function TaskSortSelect({
 
 function TaskList(props: {
   isLoading: boolean;
+  hasLoaded: boolean;
   title: string;
   tasks: Task[];
   today: string;
@@ -756,15 +826,36 @@ function TaskList(props: {
   onMove: (taskId: string, state: TaskState) => Promise<void>;
   onUpdate: (taskId: string, input: TaskDraftFields) => Promise<void>;
 }) {
+  const sectionRef = useRef<HTMLElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  async function preserveRowFocus(action: () => Promise<void>) {
+    const focused = document.activeElement;
+    const rows = Array.from(sectionRef.current?.querySelectorAll("article") ?? []);
+    const index = rows.findIndex((row) => row.contains(focused));
+    const neighbor = rows[index + 1] ?? rows[index - 1];
+    await action();
+    window.requestAnimationFrame(() => {
+      if (index >= 0 && !focused?.isConnected && document.activeElement === document.body) {
+        const target = neighbor?.isConnected
+          ? neighbor.querySelector<HTMLButtonElement>("button:not(:disabled)")
+          : null;
+        (target ?? headingRef.current)?.focus();
+      }
+    });
+  }
+
   return (
-    <section aria-busy={props.isLoading} className="mt-6">
+    <section aria-busy={props.isLoading} className="mt-6" ref={sectionRef}>
       <div className="flex items-center justify-between border-b border-rule pb-2">
-        <h2 className="text-lg font-bold text-ink-strong">{props.title}</h2>
+        <h2 className="focus-ring text-lg font-bold text-ink-strong" ref={headingRef} tabIndex={-1}>
+          {props.title}
+        </h2>
         <span className="text-ink-muted tabular-nums">
-          {props.isLoading ? "..." : props.tasks.length}
+          {props.hasLoaded ? props.tasks.length : "..."}
         </span>
       </div>
-      {props.isLoading ? (
+      {!props.hasLoaded && props.isLoading ? (
         <TaskListSkeleton />
       ) : props.tasks.length ? (
         <div className="mt-3 grid gap-2">
@@ -774,8 +865,8 @@ function TaskList(props: {
               task={task}
               today={props.today}
               onDelete={props.onDelete}
-              onMove={props.onMove}
-              onUpdate={props.onUpdate}
+              onMove={(id, state) => preserveRowFocus(() => props.onMove(id, state))}
+              onUpdate={(id, fields) => preserveRowFocus(() => props.onUpdate(id, fields))}
             />
           ))}
         </div>
@@ -828,6 +919,15 @@ function TaskRow({
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [showTitleRequired, setShowTitleRequired] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const wasEditing = useRef(false);
+
+  useLayoutEffect(() => {
+    if (editing) titleInputRef.current?.focus();
+    else if (wasEditing.current) editButtonRef.current?.focus();
+    wasEditing.current = editing;
+  }, [editing]);
   const pastDue = isPastDue(task, today);
   const dueToday = isDueToday(task, today);
   const titleErrorId = `task-${task.id}-title-error`;
@@ -900,13 +1000,16 @@ function TaskRow({
             <fieldset className="task-form min-w-0" disabled={saving}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="grid gap-1.5">
-                  <span className="text-xs font-bold text-ink-muted">Title</span>
+                  <span className="text-xs font-bold text-ink-muted">Title (required)</span>
                   <input
                     aria-describedby={showTitleRequired ? titleErrorId : undefined}
                     aria-invalid={showTitleRequired}
                     aria-label="Title"
                     className={fieldClass}
                     placeholder="Task Title (required)"
+                    ref={titleInputRef}
+                    required
+                    onInvalid={() => setShowTitleRequired(true)}
                     value={title}
                     onBlur={() => setShowTitleRequired(titleMissing)}
                     onChange={(event) => {
@@ -1004,6 +1107,7 @@ function TaskRow({
           <>
             <button
               aria-label="Edit Task"
+              ref={editButtonRef}
               className={iconButton}
               disabled={saving}
               onClick={() => {

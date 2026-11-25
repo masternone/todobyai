@@ -8,10 +8,23 @@ import type {
   TaskState,
 } from "../domain/task";
 import {
+  loadTaskViewForCurrentUser,
   listArchivedTasksForCurrentUser,
   listMainViewTasksForCurrentUser,
 } from "../server/taskFunctions";
 import { runTaskCommandForCurrentUser, type TaskCommand } from "../server/taskCommands";
+
+export const loadTaskView = createServerFn({ method: "GET" })
+  .validator((view: "Tasks" | "Archive") => view)
+  .handler(async ({ data }) => {
+    try {
+      return await loadTaskViewForCurrentUser(data);
+    } catch {
+      // Signed-out routes show the sign-in gate. Other failures use the existing
+      // client loading/error/retry path rather than replacing it with a route error.
+      return null;
+    }
+  });
 
 const listMainViewTasksServerFn = createServerFn({ method: "GET" })
   .validator((input: { filter: TaskFilter; sort: TaskSort; today: string }) => input)

@@ -1,11 +1,12 @@
 import * as taskClient from "./client/taskClient";
 import { AuthActionButton } from "./auth";
+import { useLocalDay } from "./localDay";
 import type { TaskState } from "./domain/task";
 import { TaskAppStateContext, type TaskAppContext, type TaskDraftFields } from "./taskAppState";
 import "./styles.css";
 
 export function TaskAppShell({ children }: Readonly<{ children: React.ReactNode }>) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = useLocalDay();
 
   async function addTask(input: TaskDraftFields) {
     await taskClient.createTask(input);

@@ -13,9 +13,9 @@ export class AuthenticationRequiredError extends Error {
 
 export async function getCurrentUserFromSession(): Promise<User> {
   if (process.env.VITE_TODO_BY_AI_AUTH_MODE === "test") {
-    return {
-      id: getCookie("todo-by-ai-test-user") ?? process.env.TODO_BY_AI_TEST_USER_ID ?? "test-user",
-    };
+    const id = getCookie("todo-by-ai-test-user") ?? process.env.TODO_BY_AI_TEST_USER_ID;
+    if (!id) throw new AuthenticationRequiredError();
+    return { id };
   }
 
   const session = await getClerkSession();

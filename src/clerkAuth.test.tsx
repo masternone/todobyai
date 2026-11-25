@@ -9,7 +9,7 @@ const clerk = vi.hoisted(() => ({
   signIn: vi.fn(({ children }: { children: ReactNode }) => children),
   signUp: vi.fn(({ children }: { children: ReactNode }) => children),
   signOut: vi.fn(({ children }: { children: ReactNode }) => children),
-  useAuth: vi.fn(() => ({ isLoaded: true, isSignedIn: false })),
+  useAuth: vi.fn(() => ({ isLoaded: true, isSignedIn: false, userId: null as string | null })),
 }));
 
 vi.mock("@clerk/tanstack-react-start", () => ({
@@ -28,17 +28,17 @@ describe("Clerk authentication boundary", () => {
   it("forwards configuration and exposes the Clerk session", () => {
     function Session() {
       const auth = useContext(AuthContext);
-      return <output>{auth?.isLoaded && auth.isSignedIn ? "Signed in" : "Signed out"}</output>;
+      return <output>{auth?.isLoaded && auth.isSignedIn ? auth.userId : "Signed out"}</output>;
     }
 
-    clerk.useAuth.mockReturnValue({ isLoaded: true, isSignedIn: true });
+    clerk.useAuth.mockReturnValue({ isLoaded: true, isSignedIn: true, userId: "user_clerk_123" });
     expect(
       renderToStaticMarkup(
         <ClerkAuthProvider publishableKey="test-publishable-key">
           <Session />
         </ClerkAuthProvider>,
       ),
-    ).toContain("Signed in");
+    ).toContain("user_clerk_123");
     expect(clerk.provider.mock.calls[0][0]).toMatchObject({
       publishableKey: "test-publishable-key",
     });

@@ -48,6 +48,35 @@ function createRecordingRepository(): TaskRepository & { initialized: boolean; u
 }
 
 describe("Task server auth boundary", () => {
+  it("rejects signed-out route snapshots before accessing the database", async () => {
+    const taskRepository = createRecordingRepository();
+    const handlers = createTaskFunctionHandlers({
+      getCurrentUser: async () => {
+        throw new AuthenticationRequiredError();
+      },
+      taskRepository,
+    });
+    await expect(handlers.loadTaskViewForCurrentUser("Tasks")).rejects.toThrow(
+      "Sign in to access Tasks.",
+    );
+    expect(taskRepository.initialized).toBe(false);
+    expect(taskRepository.users).toEqual([]);
+  });
+
+  it.each(["Tasks", "Archive"] as const)(
+    "loads %s only for the authenticated owner",
+    async (view) => {
+      const taskRepository = createRecordingRepository();
+      const handlers = createTaskFunctionHandlers({
+        getCurrentUser: async () => ({ id: "user_snapshot_owner" }),
+        taskRepository,
+      });
+      const snapshot = await handlers.loadTaskViewForCurrentUser(view);
+      expect(snapshot.ownerUserId).toBe("user_snapshot_owner");
+      expect(taskRepository.users).toEqual([{ id: "user_snapshot_owner" }]);
+    },
+  );
+
   it("rejects signed-out Task list requests", async () => {
     const taskRepository = createRecordingRepository();
     const handlers = createTaskFunctionHandlers({

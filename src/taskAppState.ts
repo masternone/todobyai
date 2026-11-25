@@ -3,6 +3,12 @@ import type { MainViewTasks, Task, TaskFilter, TaskSort, TaskState } from "./dom
 
 export type TaskDraftFields = { title: string; note: string; dueDate: string };
 
+export type TaskViewSnapshot = {
+  ownerUserId: string;
+  mainView: MainViewTasks;
+  archivedTasks: Task[];
+};
+
 export type TaskAppContext = {
   addTask: (input: TaskDraftFields) => Promise<void>;
   listArchivedTasks: (input: { sort: TaskSort }) => Promise<Task[]>;

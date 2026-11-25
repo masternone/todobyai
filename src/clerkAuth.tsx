@@ -21,16 +21,17 @@ export function ClerkAuthProvider({
 }
 
 function ClerkSessionProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, userId } = useAuth();
   const value = useMemo<AuthContextValue>(
     () => ({
       isLoaded,
       isSignedIn: Boolean(isSignedIn),
+      userId: userId ?? null,
       signIn: () => undefined,
       signUp: () => undefined,
       signOut: () => undefined,
     }),
-    [isLoaded, isSignedIn],
+    [isLoaded, isSignedIn, userId],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
